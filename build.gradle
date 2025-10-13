@@ -1,0 +1,262 @@
+plugins {
+    id 'scala'
+    id 'application'
+    id 'com.gradleup.shadow' version '9.0.0-beta4'
+    id 'jacoco'
+}
+
+group = 'com.pipeline'
+version = '1.0-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+scala {
+    zincVersion = '1.9.3'
+}
+
+tasks.withType(ScalaCompile) {
+    scalaCompileOptions.additionalParameters = [
+        '-target:11',
+        '-deprecation',
+        '-feature',
+        '-unchecked',
+        '-Xlint'
+    ]
+}
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    sparkVersion = '3.5.6'
+    scalaVersion = '2.12'
+    scalaLibVersion = '2.12.18'
+    avroVersion = '1.11.3'
+    deltaVersion = '3.0.0'
+    postgresVersion = '42.6.0'
+    mysqlVersion = '8.2.0'
+    kafkaVersion = '3.6.0'
+    awsSdkVersion = '2.20.160'
+    vaultVersion = '5.1.0'
+    jacksonVersion = '2.15.3'
+    scalatestVersion = '3.2.17'
+    testcontainersVersion = '1.19.3'
+    mockitoVersion = '5.7.0'
+    slf4jVersion = '2.0.9'
+    logbackVersion = '1.4.11'
+}
+
+dependencies {
+    // Scala
+    implementation "org.scala-lang:scala-library:${scalaLibVersion}"
+
+    // Spark (provided scope for cluster mode, included for local CLI mode)
+    implementation "org.apache.spark:spark-core_${scalaVersion}:${sparkVersion}"
+    implementation "org.apache.spark:spark-sql_${scalaVersion}:${sparkVersion}"
+    implementation "org.apache.spark:spark-streaming_${scalaVersion}:${sparkVersion}"
+    implementation "org.apache.spark:spark-avro_${scalaVersion}:${sparkVersion}"
+
+    // Avro
+    implementation "org.apache.avro:avro:${avroVersion}"
+
+    // Delta Lake
+    implementation "io.delta:delta-spark_${scalaVersion}:${deltaVersion}"
+
+    // JDBC Drivers
+    implementation "org.postgresql:postgresql:${postgresVersion}"
+    implementation "com.mysql:mysql-connector-j:${mysqlVersion}"
+
+    // Kafka
+    implementation "org.apache.kafka:kafka-clients:${kafkaVersion}"
+    implementation "org.apache.spark:spark-sql-kafka-0-10_${scalaVersion}:${sparkVersion}"
+
+    // AWS SDK for S3
+    implementation "software.amazon.awssdk:s3:${awsSdkVersion}"
+    implementation "org.apache.hadoop:hadoop-aws:3.3.4"
+
+    // Vault
+    implementation "com.bettercloud:vault-java-driver:${vaultVersion}"
+
+    // Jackson for JSON parsing
+    implementation "com.fasterxml.jackson.module:jackson-module-scala_${scalaVersion}:${jacksonVersion}"
+    implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
+
+    // Logging
+    implementation "org.slf4j:slf4j-api:${slf4jVersion}"
+    implementation "ch.qos.logback:logback-classic:${logbackVersion}"
+
+    // Test dependencies
+    testImplementation "org.scalatest:scalatest_${scalaVersion}:${scalatestVersion}"
+    testImplementation "org.scalatestplus:mockito-4-11_${scalaVersion}:${scalatestVersion}.0"
+    testImplementation "org.scalatestplus:junit-4-13_${scalaVersion}:${scalatestVersion}.0"
+    testImplementation "junit:junit:4.13.2"
+    testImplementation "org.testcontainers:testcontainers:${testcontainersVersion}"
+    testImplementation "org.testcontainers:postgresql:${testcontainersVersion}"
+    testImplementation "org.testcontainers:mysql:${testcontainersVersion}"
+    testImplementation "org.testcontainers:kafka:${testcontainersVersion}"
+    testImplementation "org.mockito:mockito-core:${mockitoVersion}"
+    testRuntimeOnly "org.scala-lang.modules:scala-xml_${scalaVersion}:2.1.0"
+}
+
+application {
+    mainClass = 'com.pipeline.cli.PipelineRunner'
+}
+
+// Standard JAR (includes Spark for local CLI execution)
+jar {
+    archiveBaseName = 'pipeline-app'
+    manifest {
+        attributes(
+            'Main-Class': 'com.pipeline.cli.PipelineRunner',
+            'Implementation-Version': version
+        )
+    }
+}
+
+// Shadow/Uber JAR (excludes Spark for cluster execution)
+shadowJar {
+    archiveBaseName = 'pipeline-app'
+    archiveClassifier = 'all'
+    mergeServiceFiles()
+    zip64 = true  // Enable zip64 for large archives
+
+    // Exclude Spark dependencies - provided by cluster
+    dependencies {
+        exclude(dependency('org.apache.spark:.*'))
+        exclude(dependency('org.scala-lang:.*'))
+    }
+
+    // Handle duplicate files
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+
+    manifest {
+        attributes(
+            'Main-Class': 'com.pipeline.cli.PipelineRunner'
+        )
+    }
+}
+
+// Jacoco test coverage
+jacoco {
+    toolVersion = "0.8.10"
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
+    }
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                '**/cli/**',  // CLI is thin wrapper, tested via integration
+                '**/config/StepConfig*',  // Simple case classes
+                '**/core/StepResult*'  // Simple case classes
+            ])
+        }))
+    }
+}
+
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            limit {
+                minimum = 0.85
+            }
+        }
+    }
+}
+
+test {
+    // ScalaTest uses its own test runner
+    useJUnit()
+
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+        showStandardStreams = true
+    }
+
+    // JVM options for tests (including Java 17 module opens for Spark)
+    jvmArgs '-Xmx2g', '-XX:+UseG1GC',
+        '--add-opens=java.base/java.lang=ALL-UNNAMED',
+        '--add-opens=java.base/java.lang.invoke=ALL-UNNAMED',
+        '--add-opens=java.base/java.lang.reflect=ALL-UNNAMED',
+        '--add-opens=java.base/java.io=ALL-UNNAMED',
+        '--add-opens=java.base/java.net=ALL-UNNAMED',
+        '--add-opens=java.base/java.nio=ALL-UNNAMED',
+        '--add-opens=java.base/java.util=ALL-UNNAMED',
+        '--add-opens=java.base/java.util.concurrent=ALL-UNNAMED',
+        '--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED',
+        '--add-opens=java.base/sun.nio.ch=ALL-UNNAMED',
+        '--add-opens=java.base/sun.nio.cs=ALL-UNNAMED',
+        '--add-opens=java.base/sun.security.action=ALL-UNNAMED',
+        '--add-opens=java.base/sun.util.calendar=ALL-UNNAMED',
+        '--add-opens=java.security.jgss/sun.security.krb5=ALL-UNNAMED'
+
+    // Separate test tasks can be defined for integration/performance tests
+    systemProperty 'test.env', 'local'
+}
+
+// Task to run only unit tests
+tasks.register('unitTest', Test) {
+    useJUnitPlatform()
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+
+    filter {
+        includeTestsMatching '*unit.*'
+    }
+}
+
+// Task to run only integration tests
+tasks.register('integrationTest', Test) {
+    useJUnitPlatform()
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+
+    filter {
+        includeTestsMatching '*integration.*'
+    }
+
+    // Integration tests may take longer
+    timeout = Duration.ofMinutes(10)
+}
+
+// Task to run only contract tests
+tasks.register('contractTest', Test) {
+    useJUnitPlatform()
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+
+    filter {
+        includeTestsMatching '*contract.*'
+    }
+}
+
+// Task to run only performance tests
+tasks.register('performanceTest', Test) {
+    useJUnitPlatform()
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+
+    filter {
+        includeTestsMatching '*performance.*'
+    }
+
+    // Performance tests need more resources
+    maxHeapSize = '4g'
+    timeout = Duration.ofMinutes(15)
+}
+
+tasks.named('build') {
+    dependsOn shadowJar
+}
