@@ -1,0 +1,369 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pipeline.com/schemas/step-config.json",
+  "title": "Step Configuration Schemas",
+  "description": "Configuration schemas for each step type and method",
+
+  "definitions": {
+    "extractPostgres": {
+      "type": "object",
+      "required": ["table", "credentialPath", "credentialType"],
+      "properties": {
+        "table": {
+          "type": "string",
+          "description": "Table name to extract from"
+        },
+        "credentialPath": {
+          "type": "string",
+          "description": "Vault path for JDBC credentials",
+          "pattern": "^secret/data/"
+        },
+        "credentialType": {
+          "type": "string",
+          "const": "jdbc"
+        },
+        "partitionColumn": {
+          "type": "string",
+          "description": "Column to partition on for parallel reads"
+        },
+        "numPartitions": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 8
+        },
+        "lowerBound": {
+          "type": "integer",
+          "description": "Lower bound for partition column"
+        },
+        "upperBound": {
+          "type": "integer",
+          "description": "Upper bound for partition column"
+        }
+      }
+    },
+
+    "extractMySQL": {
+      "type": "object",
+      "required": ["table", "credentialPath", "credentialType"],
+      "properties": {
+        "table": { "type": "string" },
+        "credentialPath": { "type": "string", "pattern": "^secret/data/" },
+        "credentialType": { "type": "string", "const": "jdbc" },
+        "partitionColumn": { "type": "string" },
+        "numPartitions": { "type": "integer", "minimum": 1, "maximum": 100, "default": 8 },
+        "lowerBound": { "type": "integer" },
+        "upperBound": { "type": "integer" }
+      }
+    },
+
+    "extractKafka": {
+      "type": "object",
+      "required": ["topic", "credentialPath", "credentialType"],
+      "properties": {
+        "topic": {
+          "type": "string",
+          "description": "Kafka topic to subscribe to"
+        },
+        "credentialPath": {
+          "type": "string",
+          "description": "Vault path for Kafka credentials",
+          "pattern": "^secret/data/"
+        },
+        "credentialType": {
+          "type": "string",
+          "const": "other"
+        },
+        "streaming": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to use streaming mode"
+        },
+        "startingOffsets": {
+          "type": "string",
+          "enum": ["earliest", "latest"],
+          "default": "earliest"
+        }
+      }
+    },
+
+    "extractS3": {
+      "type": "object",
+      "required": ["bucket", "path", "credentialPath", "credentialType"],
+      "properties": {
+        "bucket": {
+          "type": "string",
+          "description": "S3 bucket name"
+        },
+        "path": {
+          "type": "string",
+          "description": "Object path/prefix in bucket"
+        },
+        "credentialPath": {
+          "type": "string",
+          "description": "Vault path for IAM credentials",
+          "pattern": "^secret/data/"
+        },
+        "credentialType": {
+          "type": "string",
+          "const": "iam"
+        },
+        "format": {
+          "type": "string",
+          "enum": ["parquet", "csv", "json", "avro"],
+          "default": "parquet"
+        }
+      }
+    },
+
+    "extractDeltaLake": {
+      "type": "object",
+      "required": ["path"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to DeltaLake table"
+        },
+        "versionAsOf": {
+          "type": "integer",
+          "description": "Read specific version of Delta table"
+        },
+        "timestampAsOf": {
+          "type": "string",
+          "description": "Read Delta table as of timestamp (ISO 8601)"
+        }
+      }
+    },
+
+    "transformFilterRows": {
+      "type": "object",
+      "required": ["condition"],
+      "properties": {
+        "condition": {
+          "type": "string",
+          "description": "SQL-like filter condition (e.g., 'age > 18 AND status = active')"
+        }
+      }
+    },
+
+    "transformAggregateData": {
+      "type": "object",
+      "required": ["groupBy", "aggregations"],
+      "properties": {
+        "groupBy": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "Columns to group by"
+        },
+        "aggregations": {
+          "type": "object",
+          "description": "Map of column to aggregation function (sum, avg, count, min, max)",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+
+    "transformJoinDataFrames": {
+      "type": "object",
+      "required": ["joinKey"],
+      "properties": {
+        "joinKey": {
+          "type": "string",
+          "description": "Column name to join on"
+        },
+        "broadcast": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use broadcast join for small right table"
+        }
+      },
+      "description": "Note: rightDataFrame must be provided programmatically, not in JSON"
+    },
+
+    "transformEnrichData": {
+      "type": "object",
+      "required": ["columns"],
+      "properties": {
+        "columns": {
+          "type": "object",
+          "description": "Map of new column name to SQL expression",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+
+    "transformReshapeData": {
+      "type": "object",
+      "required": ["operation"],
+      "properties": {
+        "operation": {
+          "type": "string",
+          "enum": ["pivot", "unpivot"]
+        },
+        "pivotKey": {
+          "type": "string",
+          "description": "Column to group by (for pivot)"
+        },
+        "pivotCol": {
+          "type": "string",
+          "description": "Column to pivot on (for pivot)"
+        }
+      }
+    },
+
+    "validateSchema": {
+      "type": "object",
+      "required": ["schema"],
+      "properties": {
+        "schema": {
+          "type": "object",
+          "description": "Expected schema definition (Spark StructType JSON representation)"
+        }
+      }
+    },
+
+    "validateNulls": {
+      "type": "object",
+      "required": ["requiredColumns"],
+      "properties": {
+        "requiredColumns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "Columns that must not contain nulls"
+        }
+      }
+    },
+
+    "validateRanges": {
+      "type": "object",
+      "required": ["ranges"],
+      "properties": {
+        "ranges": {
+          "type": "object",
+          "description": "Map of column to [min, max] range",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        }
+      }
+    },
+
+    "validateReferentialIntegrity": {
+      "type": "object",
+      "required": ["foreignKey"],
+      "properties": {
+        "foreignKey": {
+          "type": "string",
+          "description": "Foreign key column to validate"
+        }
+      },
+      "description": "Note: referenceTable must be provided programmatically"
+    },
+
+    "validateBusinessRules": {
+      "type": "object",
+      "required": ["rules"],
+      "properties": {
+        "rules": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "SQL-like boolean expressions that must be true"
+        }
+      }
+    },
+
+    "loadPostgres": {
+      "type": "object",
+      "required": ["table", "credentialPath", "credentialType"],
+      "properties": {
+        "table": { "type": "string" },
+        "credentialPath": { "type": "string", "pattern": "^secret/data/" },
+        "credentialType": { "type": "string", "const": "jdbc" },
+        "mode": {
+          "type": "string",
+          "enum": ["Append", "Overwrite", "ErrorIfExists", "Ignore"],
+          "default": "Append"
+        }
+      }
+    },
+
+    "loadMySQL": {
+      "type": "object",
+      "required": ["table", "credentialPath", "credentialType"],
+      "properties": {
+        "table": { "type": "string" },
+        "credentialPath": { "type": "string", "pattern": "^secret/data/" },
+        "credentialType": { "type": "string", "const": "jdbc" },
+        "mode": {
+          "type": "string",
+          "enum": ["Append", "Overwrite", "ErrorIfExists", "Ignore"],
+          "default": "Append"
+        }
+      }
+    },
+
+    "loadKafka": {
+      "type": "object",
+      "required": ["topic", "credentialPath", "credentialType"],
+      "properties": {
+        "topic": { "type": "string" },
+        "credentialPath": { "type": "string", "pattern": "^secret/data/" },
+        "credentialType": { "type": "string", "const": "other" },
+        "checkpointLocation": {
+          "type": "string",
+          "description": "Required for streaming writes"
+        }
+      }
+    },
+
+    "loadS3": {
+      "type": "object",
+      "required": ["bucket", "path", "credentialPath", "credentialType"],
+      "properties": {
+        "bucket": { "type": "string" },
+        "path": { "type": "string" },
+        "credentialPath": { "type": "string", "pattern": "^secret/data/" },
+        "credentialType": { "type": "string", "const": "iam" },
+        "format": {
+          "type": "string",
+          "enum": ["parquet", "csv", "json", "avro"],
+          "default": "parquet"
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["Append", "Overwrite", "ErrorIfExists", "Ignore"],
+          "default": "Append"
+        }
+      }
+    },
+
+    "loadDeltaLake": {
+      "type": "object",
+      "required": ["path"],
+      "properties": {
+        "path": { "type": "string" },
+        "mode": {
+          "type": "string",
+          "enum": ["Append", "Overwrite", "ErrorIfExists", "Ignore"],
+          "default": "Append"
+        },
+        "mergeSchema": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow schema evolution"
+        },
+        "overwriteSchema": {
+          "type": "boolean",
+          "default": false,
+          "description": "Replace existing schema"
+        }
+      }
+    }
+  }
+}

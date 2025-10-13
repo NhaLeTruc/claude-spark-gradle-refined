@@ -1,0 +1,127 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pipeline.com/schemas/pipeline.json",
+  "title": "Pipeline Configuration",
+  "description": "JSON schema for defining data pipeline configurations",
+  "type": "object",
+  "required": ["name", "executionMode", "steps"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Unique name for the pipeline",
+      "minLength": 1,
+      "pattern": "^[a-zA-Z0-9_-]+$"
+    },
+    "executionMode": {
+      "type": "string",
+      "description": "Pipeline execution mode",
+      "enum": ["batch", "streaming"]
+    },
+    "steps": {
+      "type": "array",
+      "description": "Ordered list of pipeline steps",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/step"
+      }
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional pipeline description"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Optional metadata for pipeline tracking",
+      "properties": {
+        "owner": { "type": "string" },
+        "team": { "type": "string" },
+        "version": { "type": "string" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "step": {
+      "type": "object",
+      "required": ["stepType", "method", "config"],
+      "properties": {
+        "stepType": {
+          "type": "string",
+          "description": "Type of pipeline step",
+          "enum": ["extract", "transform", "validate", "load"]
+        },
+        "method": {
+          "type": "string",
+          "description": "Method name to invoke (e.g., fromPostgres, filterRows)"
+        },
+        "config": {
+          "type": "object",
+          "description": "Configuration parameters for the method (non-sensitive only)"
+        },
+        "configRef": {
+          "type": "string",
+          "description": "Relative path to external JSON file containing additional config"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "stepType": { "const": "extract" } }
+          },
+          "then": {
+            "properties": {
+              "method": {
+                "enum": ["fromPostgres", "fromMySQL", "fromKafka", "fromS3", "fromDeltaLake"]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "stepType": { "const": "load" } }
+          },
+          "then": {
+            "properties": {
+              "method": {
+                "enum": ["toPostgres", "toMySQL", "toKafka", "toS3", "toDeltaLake"]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "stepType": { "const": "transform" } }
+          },
+          "then": {
+            "properties": {
+              "method": {
+                "enum": ["filterRows", "aggregateData", "joinDataFrames", "enrichData", "reshapeData"]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "stepType": { "const": "validate" } }
+          },
+          "then": {
+            "properties": {
+              "method": {
+                "enum": [
+                  "validateSchema",
+                  "validateNulls",
+                  "validateRanges",
+                  "validateReferentialIntegrity",
+                  "validateBusinessRules"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
