@@ -1,0 +1,92 @@
+package com.pipeline.retry
+
+import org.slf4j.{Logger, LoggerFactory}
+
+import scala.annotation.tailrec
+import scala.util.{Failure, Success, Try}
+
+/**
+ * Retry strategy for pipeline execution.
+ *
+ * Implements FR-016: Retry failed pipelines up to 3 times with 5-second delays.
+ * Uses tail recursion to avoid stack overflow.
+ *
+ * Validates Constitution Section VII: Idempotency and Fault Tolerance.
+ */
+object RetryStrategy {
+
+  private val logger: Logger = LoggerFactory.getLogger(getClass)
+
+  /**
+   * Executes an operation with retry logic.
+   *
+   * @param operation    The operation to execute
+   * @param maxAttempts  Maximum number of attempts (including initial)
+   * @param delayMillis  Delay between retry attempts in milliseconds
+   * @param attempt      Current attempt number (internal, starts at 1)
+   * @tparam T Result type
+   * @return Try containing the result or final failure
+   */
+  @tailrec
+  def executeWithRetry[T](
+      operation: () => Try[T],
+      maxAttempts: Int = 3,
+      delayMillis: Long = 5000,
+      attempt: Int = 1,
+  ): Try[T] = {
+
+    logger.info(s"Executing operation (attempt $attempt of $maxAttempts)")
+
+    val result = operation()
+
+    result match {
+      case Success(value) =>
+        logger.info(s"Operation succeeded on attempt $attempt")
+        Success(value)
+
+      case Failure(exception) if attempt < maxAttempts =>
+        logger.warn(
+          s"Operation failed on attempt $attempt: ${exception.getMessage}. " +
+            s"Retrying in ${delayMillis}ms...",
+        )
+
+        // Wait before retry
+        Thread.sleep(delayMillis)
+
+        // Tail recursive call
+        executeWithRetry(operation, maxAttempts, delayMillis, attempt + 1)
+
+      case Failure(exception) =>
+        logger.error(
+          s"Operation failed after $maxAttempts attempts: ${exception.getMessage}",
+          exception,
+        )
+        Failure(exception)
+    }
+  }
+
+  /**
+   * Wraps a pipeline execution function with retry logic.
+   *
+   * @param pipelineId   Identifier for the pipeline (for logging)
+   * @param execution    The pipeline execution function
+   * @param maxAttempts  Maximum retry attempts
+   * @param delayMillis  Delay between retries
+   * @tparam T Result type
+   * @return Try containing the result or final failure
+   */
+  def withRetry[T](
+      pipelineId: String,
+      execution: => T,
+      maxAttempts: Int = 3,
+      delayMillis: Long = 5000,
+  ): Try[T] = {
+    org.slf4j.MDC.put("pipelineId", pipelineId)
+
+    try {
+      executeWithRetry(() => Try(execution), maxAttempts, delayMillis)
+    } finally {
+      org.slf4j.MDC.remove("pipelineId")
+    }
+  }
+}
