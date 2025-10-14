@@ -270,25 +270,41 @@ case class LoadStep(
     logger.info(s"Load step executing: method=$method")
 
     val df = context.getPrimaryDataFrame
+    val isStreaming = context.isStreamingMode
 
-    // Load logic will be implemented by LoadMethods
-    loadData(df, spark)
+    // Load logic delegated to LoadMethods
+    val maybeQuery = loadData(df, spark, isStreaming)
 
-    // Load doesn't modify context, just writes data
-    context
+    // Register streaming query if present
+    val updatedContext = maybeQuery match {
+      case Some(query) =>
+        // Generate query name from config or use method-based default
+        val queryName = config.get("queryName") match {
+          case Some(name) => name.toString
+          case None => s"${method}_${java.util.UUID.randomUUID().toString.take(8)}"
+        }
+        logger.info(s"Registering streaming query: $queryName")
+        context.registerStreamingQuery(queryName, query)
+      case None =>
+        logger.info(s"Batch load completed: $method")
+        context
+    }
+
+    updatedContext
   }
 
   /**
    * Delegates to LoadMethods based on method name.
+   * Returns Option[StreamingQuery] for streaming-capable methods.
    */
-  private def loadData(df: DataFrame, spark: SparkSession): Unit = {
+  private def loadData(df: DataFrame, spark: SparkSession, isStreaming: Boolean): Option[org.apache.spark.sql.streaming.StreamingQuery] = {
     method match {
-      case "toPostgres" => LoadMethods.toPostgres(df, config, spark)
-      case "toMySQL" => LoadMethods.toMySQL(df, config, spark)
-      case "toKafka" => LoadMethods.toKafka(df, config, spark)
-      case "toS3" => LoadMethods.toS3(df, config, spark)
-      case "toDeltaLake" => LoadMethods.toDeltaLake(df, config, spark)
-      case "toAvro" => LoadMethods.toAvro(df, config, spark)
+      case "toPostgres" => LoadMethods.toPostgres(df, config, spark); None
+      case "toMySQL" => LoadMethods.toMySQL(df, config, spark); None
+      case "toKafka" => LoadMethods.toKafka(df, config, spark, isStreaming)
+      case "toS3" => LoadMethods.toS3(df, config, spark); None
+      case "toDeltaLake" => LoadMethods.toDeltaLake(df, config, spark, isStreaming)
+      case "toAvro" => LoadMethods.toAvro(df, config, spark); None
       case _ => throw new IllegalArgumentException(s"Unknown load method: $method")
     }
   }
