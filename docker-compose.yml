@@ -1,0 +1,186 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: pipeline-postgres
+    environment:
+      POSTGRES_DB: pipelinedb
+      POSTGRES_USER: pipelineuser
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pipelinepass}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pipelineuser -d pipelinedb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pipeline-network
+
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: pipeline-mysql
+    environment:
+      MYSQL_DATABASE: pipelinedb
+      MYSQL_USER: pipelineuser
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-pipelinepass}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "pipelineuser", "-ppipelinepass"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pipeline-network
+
+  # Apache Kafka (with Zookeeper)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: pipeline-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - pipeline-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: pipeline-kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    ports:
+      - "29092:29092"
+      - "9092:9092"
+    volumes:
+      - ./docker/kafka/topics.sh:/docker-entrypoint-initdb.d/topics.sh
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - pipeline-network
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # HashiCorp Vault for Secrets Management
+  vault:
+    image: hashicorp/vault:1.15
+    container_name: pipeline-vault
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_TOKEN:-dev-token}
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    ports:
+      - "8200:8200"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - ./docker/vault/config.hcl:/vault/config/config.hcl
+      - ./docker/vault/init-vault.sh:/vault/init-vault.sh
+      - vault_data:/vault/file
+    command: server -dev -dev-root-token-id=${VAULT_TOKEN:-dev-token}
+    networks:
+      - pipeline-network
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MinIO (S3-compatible storage)
+  minio:
+    image: minio/minio:latest
+    container_name: pipeline-minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./docker/minio/init-buckets.sh:/docker-entrypoint-initdb.d/init-buckets.sh
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - pipeline-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MinIO Client (mc) for bucket initialization
+  minio-init:
+    image: minio/mc:latest
+    container_name: pipeline-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ACCESS_KEY:-minioadmin} ${MINIO_SECRET_KEY:-minioadmin};
+      /usr/bin/mc mb --ignore-existing myminio/pipeline-data;
+      /usr/bin/mc mb --ignore-existing myminio/pipeline-delta;
+      /usr/bin/mc mb --ignore-existing myminio/pipeline-avro;
+      /usr/bin/mc anonymous set download myminio/pipeline-data;
+      exit 0;
+      "
+    networks:
+      - pipeline-network
+
+  # Vault Initialization Service
+  vault-init:
+    image: hashicorp/vault:1.15
+    container_name: pipeline-vault-init
+    depends_on:
+      vault:
+        condition: service_healthy
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: ${VAULT_TOKEN:-dev-token}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pipelinepass}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-pipelinepass}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+    volumes:
+      - ./docker/vault/init-vault.sh:/init-vault.sh
+    command: /bin/sh /init-vault.sh
+    networks:
+      - pipeline-network
+
+networks:
+  pipeline-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  mysql_data:
+  kafka_data:
+  vault_data:
+  minio_data:

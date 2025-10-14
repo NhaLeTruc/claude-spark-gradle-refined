@@ -29,6 +29,13 @@ case class Pipeline(
   require(mode == "batch" || mode == "streaming", s"Invalid mode: $mode. Must be 'batch' or 'streaming'")
 
   /**
+   * Check if this pipeline is configured for streaming mode.
+   *
+   * @return true if mode is "streaming", false otherwise
+   */
+  def isStreamingMode: Boolean = mode == "streaming"
+
+  /**
    * Executes the pipeline with retry logic.
    *
    * @param spark         SparkSession
@@ -48,7 +55,14 @@ case class Pipeline(
     MDC.put("correlationId", java.util.UUID.randomUUID().toString)
 
     try {
-      logger.info(s"Starting pipeline execution: name=$name, mode=$mode, steps=${steps.size}")
+      if (isStreamingMode) {
+        logger.info(s"Starting STREAMING pipeline execution: name=$name, steps=${steps.size}")
+        logger.info(s"Streaming mode: continuous processing until termination")
+      } else {
+        logger.info(s"Starting BATCH pipeline execution: name=$name, steps=${steps.size}")
+      }
+
+      val startTime = System.currentTimeMillis()
 
       // Execute with retry
       val result = RetryStrategy.executeWithRetry(
@@ -57,13 +71,20 @@ case class Pipeline(
         delayMillis = delayMillis,
       )
 
+      val durationMs = System.currentTimeMillis() - startTime
+
       result match {
         case Success(context) =>
-          logger.info(s"Pipeline completed successfully: name=$name")
+          if (isStreamingMode) {
+            logger.info(s"Streaming pipeline setup completed: name=$name, setupTime=${durationMs}ms")
+            logger.info(s"Streaming pipeline is now running continuously...")
+          } else {
+            logger.info(s"Batch pipeline completed successfully: name=$name, duration=${durationMs}ms")
+          }
           Right(context)
 
         case Failure(exception) =>
-          logger.error(s"Pipeline failed after $maxAttempts attempts: name=$name", exception)
+          logger.error(s"Pipeline failed after $maxAttempts attempts: name=$name, mode=$mode, duration=${durationMs}ms", exception)
           Left(exception)
       }
 
