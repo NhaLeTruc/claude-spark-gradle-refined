@@ -1,0 +1,56 @@
+{
+  "name": "multi-source-join-pipeline",
+  "mode": "batch",
+  "steps": [
+    {
+      "type": "extract",
+      "method": "fromPostgres",
+      "config": {
+        "table": "users",
+        "credentialPath": "secret/data/postgres",
+        "registerAs": "users"
+      }
+    },
+    {
+      "type": "extract",
+      "method": "fromMySQL",
+      "config": {
+        "table": "orders",
+        "credentialPath": "secret/data/mysql",
+        "registerAs": "orders"
+      }
+    },
+    {
+      "type": "transform",
+      "method": "joinDataFrames",
+      "config": {
+        "inputDataFrames": ["users", "orders"],
+        "joinType": "inner",
+        "joinColumn": "user_id",
+        "registerAs": "user_orders"
+      }
+    },
+    {
+      "type": "transform",
+      "method": "aggregateData",
+      "config": {
+        "groupBy": ["user_id", "user_name"],
+        "aggregations": {
+          "total_orders": "count(*)",
+          "total_amount": "sum(amount)",
+          "avg_order_value": "avg(amount)"
+        }
+      }
+    },
+    {
+      "type": "load",
+      "method": "toDeltaLake",
+      "config": {
+        "path": "s3a://data-lake/delta/user_order_summary",
+        "mode": "append",
+        "mergeSchema": "true",
+        "credentialPath": "secret/data/s3"
+      }
+    }
+  ]
+}
