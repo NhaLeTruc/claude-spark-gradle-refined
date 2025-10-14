@@ -1,0 +1,78 @@
+{
+  "name": "sales-aggregation-pipeline",
+  "mode": "batch",
+  "steps": [
+    {
+      "type": "extract",
+      "method": "fromDeltaLake",
+      "config": {
+        "path": "/data/delta/transactions",
+        "timestamp": "2025-01-01 00:00:00",
+        "registerAs": "transactions"
+      }
+    },
+    {
+      "type": "transform",
+      "method": "filterRows",
+      "config": {
+        "condition": "status = 'completed' AND amount > 0"
+      }
+    },
+    {
+      "type": "transform",
+      "method": "aggregateData",
+      "config": {
+        "groupBy": ["customer_id", "product_category", "region"],
+        "aggregations": {
+          "amount": "sum",
+          "transaction_id": "count",
+          "discount": "avg"
+        }
+      }
+    },
+    {
+      "type": "transform",
+      "method": "enrichData",
+      "config": {
+        "columns": {
+          "avg_transaction_value": "amount_sum / transaction_id_count",
+          "total_savings": "amount_sum * discount_avg",
+          "aggregation_date": "current_date()"
+        }
+      }
+    },
+    {
+      "type": "transform",
+      "method": "reshapeData",
+      "config": {
+        "operation": "pivot",
+        "pivotColumn": "product_category",
+        "groupByColumns": ["customer_id", "region"],
+        "aggregateColumn": "amount_sum"
+      }
+    },
+    {
+      "type": "load",
+      "method": "toPostgres",
+      "config": {
+        "table": "customer_sales_summary",
+        "mode": "overwrite",
+        "credentialPath": "secret/data/postgres/analytics",
+        "batchSize": 5000
+      }
+    },
+    {
+      "type": "load",
+      "method": "toS3",
+      "config": {
+        "bucket": "analytics-reports",
+        "path": "/sales-summary/",
+        "format": "parquet",
+        "mode": "append",
+        "partitionBy": ["aggregation_date"],
+        "compression": "snappy",
+        "credentialPath": "secret/data/s3/production"
+      }
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "name": "incremental-load-pipeline",
+  "mode": "batch",
+  "steps": [
+    {
+      "type": "extract",
+      "method": "fromDeltaLake",
+      "config": {
+        "path": "/data/delta/checkpoint",
+        "registerAs": "checkpoint"
+      }
+    },
+    {
+      "type": "extract",
+      "method": "fromPostgres",
+      "config": {
+        "query": "SELECT * FROM orders WHERE updated_at > (SELECT MAX(last_processed_timestamp) FROM checkpoint) ORDER BY updated_at",
+        "credentialPath": "secret/data/postgres/production",
+        "partitionColumn": "id",
+        "numPartitions": 20,
+        "registerAs": "new_orders"
+      }
+    },
+    {
+      "type": "transform",
+      "method": "enrichData",
+      "config": {
+        "columns": {
+          "processing_timestamp": "current_timestamp()",
+          "load_date": "current_date()",
+          "year": "year(order_date)",
+          "month": "month(order_date)",
+          "day": "dayofmonth(order_date)"
+        }
+      }
+    },
+    {
+      "type": "load",
+      "method": "toDeltaLake",
+      "config": {
+        "path": "/data/delta/orders",
+        "mode": "append",
+        "partitionBy": ["year", "month", "day"],
+        "mergeSchema": true
+      }
+    },
+    {
+      "type": "load",
+      "method": "toDeltaLake",
+      "config": {
+        "path": "/data/delta/checkpoint",
+        "mode": "overwrite"
+      }
+    }
+  ]
+}
