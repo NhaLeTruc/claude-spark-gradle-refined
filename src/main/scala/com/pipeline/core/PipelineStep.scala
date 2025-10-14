@@ -107,6 +107,7 @@ case class ExtractStep(
       case "fromKafka" => ExtractMethods.fromKafka(config, spark)
       case "fromS3" => ExtractMethods.fromS3(config, spark)
       case "fromDeltaLake" => ExtractMethods.fromDeltaLake(config, spark)
+      case "fromAvro" => ExtractMethods.fromAvro(config, spark)
       case _ => throw new IllegalArgumentException(s"Unknown extract method: $method")
     }
   }
@@ -180,6 +181,8 @@ case class TransformStep(
       case "aggregateData" => UserMethods.aggregateData(df, cfg, spark)
       case "reshapeData" => UserMethods.reshapeData(df, cfg, spark)
       case "unionDataFrames" => UserMethods.unionDataFrames(df, cfg, spark)
+      case "toAvroSchema" => UserMethods.toAvroSchema(df, cfg, spark)
+      case "evolveAvroSchema" => UserMethods.evolveAvroSchema(df, cfg, spark)
       case _ => throw new IllegalArgumentException(s"Unknown transform method: $method")
     }
   }
@@ -271,6 +274,7 @@ case class LoadStep(
       case "toKafka" => LoadMethods.toKafka(df, config, spark)
       case "toS3" => LoadMethods.toS3(df, config, spark)
       case "toDeltaLake" => LoadMethods.toDeltaLake(df, config, spark)
+      case "toAvro" => LoadMethods.toAvro(df, config, spark)
       case _ => throw new IllegalArgumentException(s"Unknown load method: $method")
     }
   }

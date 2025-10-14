@@ -3,6 +3,7 @@ package com.pipeline.operations
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.{Logger, LoggerFactory}
 import com.pipeline.credentials.{CredentialConfigFactory, IAMConfig, JdbcConfig, OtherConfig, VaultClient}
+import com.pipeline.avro.AvroConverter
 import scala.util.{Failure, Success}
 
 /**
@@ -291,5 +292,21 @@ object LoadMethods {
     case "errorifexists" => SaveMode.ErrorIfExists
     case "ignore" => SaveMode.Ignore
     case _ => throw new IllegalArgumentException(s"Invalid save mode: $mode. Must be one of: append, overwrite, errorifexists, ignore")
+  }
+
+  /**
+   * Writes data to Avro files.
+   *
+   * @param df     DataFrame to write
+   * @param config Configuration including path, compression, partitionBy
+   * @param spark  SparkSession
+   */
+  def toAvro(df: DataFrame, config: Map[String, Any], spark: SparkSession): Unit = {
+    logger.info("Loading to Avro")
+
+    require(config.contains("path"), "'path' is required")
+
+    val path = config("path").toString
+    AvroConverter.writeAvro(df, path, config)(spark)
   }
 }

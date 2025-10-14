@@ -1,0 +1,45 @@
+{
+  "name": "avro-etl-pipeline",
+  "mode": "batch",
+  "steps": [
+    {
+      "type": "extract",
+      "method": "fromPostgres",
+      "config": {
+        "table": "events",
+        "credentialPath": "secret/data/postgres/production",
+        "partitionColumn": "id",
+        "numPartitions": 10,
+        "registerAs": "events"
+      }
+    },
+    {
+      "type": "transform",
+      "method": "filterRows",
+      "config": {
+        "condition": "event_type = 'purchase' AND amount > 100"
+      }
+    },
+    {
+      "type": "transform",
+      "method": "enrichData",
+      "config": {
+        "columns": {
+          "processing_date": "current_date()",
+          "high_value": "CASE WHEN amount > 500 THEN true ELSE false END"
+        }
+      }
+    },
+    {
+      "type": "load",
+      "method": "toAvro",
+      "config": {
+        "path": "s3a://data-lake/events-avro/",
+        "mode": "append",
+        "partitionBy": ["processing_date"],
+        "compression": "snappy",
+        "credentialPath": "secret/data/s3/production"
+      }
+    }
+  ]
+}
