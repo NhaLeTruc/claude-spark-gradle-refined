@@ -1,0 +1,35 @@
+{
+  "name": "simple-etl-pipeline",
+  "mode": "batch",
+  "steps": [
+    {
+      "type": "extract",
+      "method": "fromPostgres",
+      "config": {
+        "table": "users",
+        "credentialPath": "secret/data/postgres/production",
+        "registerAs": "users"
+      }
+    },
+    {
+      "type": "transform",
+      "method": "filterRows",
+      "config": {
+        "condition": "active = true AND age >= 18"
+      }
+    },
+    {
+      "type": "load",
+      "method": "toS3",
+      "config": {
+        "bucket": "data-lake",
+        "path": "/processed/users",
+        "format": "parquet",
+        "mode": "overwrite",
+        "compression": "snappy",
+        "partitionBy": ["year", "month"],
+        "credentialPath": "secret/data/s3/production"
+      }
+    }
+  ]
+}
