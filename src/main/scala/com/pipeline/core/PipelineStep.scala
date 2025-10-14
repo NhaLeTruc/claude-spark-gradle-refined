@@ -81,9 +81,11 @@ case class ExtractStep(
   override def execute(context: PipelineContext, spark: SparkSession): PipelineContext = {
     logger.info(s"Extract step executing: method=$method")
 
-    // Extract logic will be implemented by ExtractMethods
-    // For now, return context unchanged (will be implemented in ExtractMethods)
-    val df = extractData(spark)
+    // Check if we're in streaming mode from context metadata
+    val isStreaming = context.isStreamingMode
+
+    // Extract logic delegated to ExtractMethods
+    val df = extractData(spark, isStreaming)
 
     // Register DataFrame if registerAs is specified
     val updatedContext = config.get("registerAs") match {
@@ -100,11 +102,11 @@ case class ExtractStep(
   /**
    * Delegates to ExtractMethods based on method name.
    */
-  private def extractData(spark: SparkSession): DataFrame = {
+  private def extractData(spark: SparkSession, isStreaming: Boolean): DataFrame = {
     method match {
       case "fromPostgres" => ExtractMethods.fromPostgres(config, spark)
       case "fromMySQL" => ExtractMethods.fromMySQL(config, spark)
-      case "fromKafka" => ExtractMethods.fromKafka(config, spark)
+      case "fromKafka" => ExtractMethods.fromKafka(config, spark, isStreaming)
       case "fromS3" => ExtractMethods.fromS3(config, spark)
       case "fromDeltaLake" => ExtractMethods.fromDeltaLake(config, spark)
       case "fromAvro" => ExtractMethods.fromAvro(config, spark)
