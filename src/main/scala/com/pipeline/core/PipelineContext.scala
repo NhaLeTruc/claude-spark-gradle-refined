@@ -2,6 +2,8 @@ package com.pipeline.core
 
 import org.apache.avro.generic.GenericRecord
 import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.streaming.StreamingQuery
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable
 
@@ -9,15 +11,22 @@ import scala.collection.mutable
  * Pipeline execution context that tracks the primary data flow and registered DataFrames.
  *
  * Supports multi-DataFrame operations for complex transformations (FR-007, FR-023).
+ * Supports streaming query management for continuous processing (FR-009).
  * Implements Constitution Section V: Library-First Architecture.
  *
- * @param primary     Either Avro GenericRecord or Spark DataFrame representing the primary data flow
- * @param dataFrames  Named registry of DataFrames for multi-DataFrame operations
+ * @param primary          Either Avro GenericRecord or Spark DataFrame representing the primary data flow
+ * @param dataFrames       Named registry of DataFrames for multi-DataFrame operations
+ * @param streamingQueries Named registry of StreamingQuery objects for lifecycle management
+ * @param isStreamingMode  Flag indicating if pipeline is executing in streaming mode
  */
 case class PipelineContext(
     primary: Either[GenericRecord, DataFrame],
     dataFrames: mutable.Map[String, DataFrame] = mutable.Map.empty,
+    streamingQueries: mutable.Map[String, StreamingQuery] = mutable.Map.empty,
+    isStreamingMode: Boolean = false,
 ) {
+
+  private val logger: Logger = LoggerFactory.getLogger(getClass)
 
   /**
    * Registers a DataFrame with a name for later retrieval.
@@ -103,6 +112,86 @@ case class PipelineContext(
   def clearRegistry(): PipelineContext = {
     dataFrames.clear()
     this
+  }
+
+  /**
+   * Registers a streaming query for lifecycle management.
+   *
+   * Used by LoadStep when writing streams to sinks.
+   *
+   * @param name  Name to register the query under
+   * @param query StreamingQuery instance
+   * @return Updated context
+   */
+  def registerStreamingQuery(name: String, query: StreamingQuery): PipelineContext = {
+    streamingQueries.put(name, query)
+    logger.info(s"Registered streaming query: $name (id=${query.id})")
+    this
+  }
+
+  /**
+   * Retrieves a registered streaming query by name.
+   *
+   * @param name Name of the query to retrieve
+   * @return Option containing the StreamingQuery if found
+   */
+  def getStreamingQuery(name: String): Option[StreamingQuery] = {
+    streamingQueries.get(name)
+  }
+
+  /**
+   * Gets all registered streaming query names.
+   *
+   * @return Set of registered query names
+   */
+  def streamingQueryNames: Set[String] = streamingQueries.keySet.toSet
+
+  /**
+   * Stops all running streaming queries.
+   *
+   * Called during pipeline shutdown or cancellation.
+   */
+  def stopAllStreams(): Unit = {
+    if (streamingQueries.nonEmpty) {
+      logger.info(s"Stopping ${streamingQueries.size} streaming queries")
+      streamingQueries.values.foreach { query =>
+        if (query.isActive) {
+          logger.info(s"Stopping query: ${query.name} (id=${query.id})")
+          query.stop()
+        }
+      }
+      streamingQueries.clear()
+    }
+  }
+
+  /**
+   * Awaits termination of all streaming queries.
+   *
+   * @param timeout Optional timeout in milliseconds
+   */
+  def awaitTermination(timeout: Option[Long] = None): Unit = {
+    if (streamingQueries.isEmpty) {
+      logger.warn("No streaming queries to await")
+      return
+    }
+
+    timeout match {
+      case Some(ms) =>
+        logger.info(s"Awaiting termination for ${ms}ms")
+        streamingQueries.values.foreach(_.awaitTermination(ms))
+      case None =>
+        logger.info("Awaiting termination (indefinite)")
+        streamingQueries.values.foreach(_.awaitTermination())
+    }
+  }
+
+  /**
+   * Checks if any streaming queries are currently active.
+   *
+   * @return True if at least one query is active
+   */
+  def hasActiveStreams: Boolean = {
+    streamingQueries.values.exists(_.isActive)
   }
 }
 

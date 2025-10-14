@@ -121,38 +121,61 @@ object ExtractMethods {
    * @param spark  SparkSession
    * @return DataFrame containing extracted data
    */
-  def fromKafka(config: Map[String, Any], spark: SparkSession): DataFrame = {
-    logger.info("Extracting from Kafka")
+  def fromKafka(config: Map[String, Any], spark: SparkSession, isStreaming: Boolean = false): DataFrame = {
+    val mode = if (isStreaming) "STREAMING" else "BATCH"
+    logger.info(s"Extracting from Kafka in $mode mode")
 
     require(config.contains("topic"), "'topic' is required")
 
     val kafkaConfig = resolveKafkaCredentials(config)
     val topic = config("topic").toString
+    val bootstrapServers = kafkaConfig.get("bootstrap.servers").getOrElse("localhost:9092")
 
-    val reader = spark.read
-      .format("kafka")
-      .option("kafka.bootstrap.servers", kafkaConfig.get("bootstrap.servers").getOrElse("localhost:9092"))
-      .option("subscribe", topic)
+    // Create DataFrame based on mode
+    val df = if (isStreaming) {
+      logger.info(s"Creating streaming reader for topic: $topic")
+      var streamReader = spark.readStream
+        .format("kafka")
+        .option("kafka.bootstrap.servers", bootstrapServers)
+        .option("subscribe", topic)
+        .option("startingOffsets", config.getOrElse("startingOffsets", "latest").toString)
+        // Streaming-specific options
+        .option("failOnDataLoss", config.getOrElse("failOnDataLoss", "false").toString)
+        .option("maxOffsetsPerTrigger", config.getOrElse("maxOffsetsPerTrigger", "1000000").toString)
+        .option("minPartitions", config.getOrElse("minPartitions", "1").toString)
 
-    // Add Kafka-specific options
-    kafkaConfig.properties.foreach { case (key, value) =>
-      if (key != "bootstrap.servers") {
-        reader.option(s"kafka.$key", value)
+      // Add additional Kafka-specific options
+      kafkaConfig.properties.foreach { case (key, value) =>
+        if (key != "bootstrap.servers") {
+          streamReader = streamReader.option(s"kafka.$key", value)
+        }
       }
+
+      streamReader.load()
+    } else {
+      logger.info(s"Creating batch reader for topic: $topic")
+      var batchReader = spark.read
+        .format("kafka")
+        .option("kafka.bootstrap.servers", bootstrapServers)
+        .option("subscribe", topic)
+        .option("startingOffsets", config.getOrElse("startingOffsets", "earliest").toString)
+
+      // Ending offsets (for batch reads only)
+      config.get("endingOffsets").foreach { offsets =>
+        batchReader = batchReader.option("endingOffsets", offsets.toString)
+      }
+
+      // Add additional Kafka-specific options
+      kafkaConfig.properties.foreach { case (key, value) =>
+        if (key != "bootstrap.servers") {
+          batchReader = batchReader.option(s"kafka.$key", value)
+        }
+      }
+
+      batchReader.load()
     }
 
-    // Starting offsets
-    val startingOffsets = config.getOrElse("startingOffsets", "earliest").toString
-    reader.option("startingOffsets", startingOffsets)
-
-    // Ending offsets (for batch reads)
-    config.get("endingOffsets").foreach { offsets =>
-      reader.option("endingOffsets", offsets.toString)
-    }
-
-    val df = reader.load()
-
-    logger.info(s"Extracted data from Kafka topic: $topic")
+    logger.info(s"Extracted data from Kafka topic '$topic' in $mode mode")
     df
   }
 

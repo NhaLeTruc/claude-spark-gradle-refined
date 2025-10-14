@@ -119,14 +119,31 @@ case class Pipeline(
     }
 
     // Execute the chain starting from the first step
-    val initialContext = PipelineContext(Right(spark.emptyDataFrame))
+    // Initialize context with streaming mode flag
+    val initialContext = PipelineContext(
+      primary = Right(spark.emptyDataFrame),
+      isStreamingMode = isStreamingMode
+    )
 
-    chainedSteps match {
+    val resultContext = chainedSteps match {
       case Some(firstStep) =>
         firstStep.executeChain(initialContext, spark)
       case None =>
         throw new IllegalStateException("Failed to build pipeline chain")
     }
+
+    // Handle streaming-specific post-execution
+    if (isStreamingMode && resultContext.hasActiveStreams) {
+      logger.info(s"Streaming pipeline started with ${resultContext.streamingQueryNames.size} queries")
+      logger.info(s"Active queries: ${resultContext.streamingQueryNames.mkString(", ")}")
+
+      // Check if we should await termination
+      // In production, this would be configurable via pipeline config
+      // For now, we'll keep queries running (user can await externally)
+      logger.info("Streaming queries running in background")
+    }
+
+    resultContext
   }
 }
 
