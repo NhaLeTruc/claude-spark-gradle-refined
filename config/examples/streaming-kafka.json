@@ -1,0 +1,42 @@
+{
+  "name": "streaming-kafka-pipeline",
+  "mode": "streaming",
+  "steps": [
+    {
+      "type": "extract",
+      "method": "fromKafka",
+      "config": {
+        "topic": "user-events",
+        "credentialPath": "secret/data/kafka",
+        "startingOffsets": "latest"
+      }
+    },
+    {
+      "type": "transform",
+      "method": "filterRows",
+      "config": {
+        "condition": "event_type = 'purchase' AND amount > 100"
+      }
+    },
+    {
+      "type": "transform",
+      "method": "enrichData",
+      "config": {
+        "columns": {
+          "event_timestamp": "from_unixtime(timestamp)",
+          "high_value": "amount >= 500"
+        }
+      }
+    },
+    {
+      "type": "load",
+      "method": "toDeltaLake",
+      "config": {
+        "path": "s3a://data-lake/delta/high_value_purchases",
+        "mode": "append",
+        "checkpointLocation": "/tmp/checkpoints/purchases",
+        "credentialPath": "secret/data/s3"
+      }
+    }
+  ]
+}
