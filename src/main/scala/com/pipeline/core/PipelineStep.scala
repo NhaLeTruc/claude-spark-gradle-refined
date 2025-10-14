@@ -2,6 +2,7 @@ package com.pipeline.core
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.{Logger, LoggerFactory}
+import com.pipeline.operations.{ExtractMethods, LoadMethods, UserMethods}
 
 /**
  * Sealed trait for pipeline steps implementing Chain of Responsibility pattern.
@@ -97,13 +98,17 @@ case class ExtractStep(
   }
 
   /**
-   * Placeholder for actual extraction logic.
-   * Will be delegated to ExtractMethods in full implementation.
+   * Delegates to ExtractMethods based on method name.
    */
   private def extractData(spark: SparkSession): DataFrame = {
-    // This will call ExtractMethods based on method name
-    // For now, return empty DataFrame to satisfy compilation
-    spark.emptyDataFrame
+    method match {
+      case "fromPostgres" => ExtractMethods.fromPostgres(config, spark)
+      case "fromMySQL" => ExtractMethods.fromMySQL(config, spark)
+      case "fromKafka" => ExtractMethods.fromKafka(config, spark)
+      case "fromS3" => ExtractMethods.fromS3(config, spark)
+      case "fromDeltaLake" => ExtractMethods.fromDeltaLake(config, spark)
+      case _ => throw new IllegalArgumentException(s"Unknown extract method: $method")
+    }
   }
 }
 
@@ -165,13 +170,18 @@ case class TransformStep(
   }
 
   /**
-   * Placeholder for actual transformation logic.
-   * Will be delegated to UserMethods in full implementation.
+   * Delegates to UserMethods based on method name.
    */
   private def transformData(df: DataFrame, cfg: Map[String, Any], spark: SparkSession): DataFrame = {
-    // This will call UserMethods based on method name
-    // For now, return unchanged DataFrame
-    df
+    method match {
+      case "filterRows" => UserMethods.filterRows(df, cfg, spark)
+      case "enrichData" => UserMethods.enrichData(df, cfg, spark)
+      case "joinDataFrames" => UserMethods.joinDataFrames(df, cfg, spark)
+      case "aggregateData" => UserMethods.aggregateData(df, cfg, spark)
+      case "reshapeData" => UserMethods.reshapeData(df, cfg, spark)
+      case "unionDataFrames" => UserMethods.unionDataFrames(df, cfg, spark)
+      case _ => throw new IllegalArgumentException(s"Unknown transform method: $method")
+    }
   }
 }
 
@@ -206,12 +216,18 @@ case class ValidateStep(
   }
 
   /**
-   * Placeholder for actual validation logic.
-   * Will be delegated to UserMethods in full implementation.
+   * Delegates to UserMethods validation methods based on method name.
+   * Throws exception if validation fails.
    */
   private def validateData(df: DataFrame, cfg: Map[String, Any], spark: SparkSession): Unit = {
-    // This will call UserMethods validation methods
-    // Throws exception if validation fails
+    method match {
+      case "validateSchema" => UserMethods.validateSchema(df, cfg, spark)
+      case "validateNulls" => UserMethods.validateNulls(df, cfg, spark)
+      case "validateRanges" => UserMethods.validateRanges(df, cfg, spark)
+      case "validateReferentialIntegrity" => UserMethods.validateReferentialIntegrity(df, cfg, spark)
+      case "validateBusinessRules" => UserMethods.validateBusinessRules(df, cfg, spark)
+      case _ => throw new IllegalArgumentException(s"Unknown validation method: $method")
+    }
   }
 }
 
@@ -246,10 +262,16 @@ case class LoadStep(
   }
 
   /**
-   * Placeholder for actual load logic.
-   * Will be delegated to LoadMethods in full implementation.
+   * Delegates to LoadMethods based on method name.
    */
   private def loadData(df: DataFrame, spark: SparkSession): Unit = {
-    // This will call LoadMethods based on method name
+    method match {
+      case "toPostgres" => LoadMethods.toPostgres(df, config, spark)
+      case "toMySQL" => LoadMethods.toMySQL(df, config, spark)
+      case "toKafka" => LoadMethods.toKafka(df, config, spark)
+      case "toS3" => LoadMethods.toS3(df, config, spark)
+      case "toDeltaLake" => LoadMethods.toDeltaLake(df, config, spark)
+      case _ => throw new IllegalArgumentException(s"Unknown load method: $method")
+    }
   }
 }
