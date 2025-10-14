@@ -1,6 +1,7 @@
 package com.pipeline.operations
 
 import com.pipeline.credentials.{CredentialConfigFactory, IAMConfig, JdbcConfig, OtherConfig, VaultClient}
+import com.pipeline.avro.AvroConverter
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -314,5 +315,21 @@ object ExtractMethods {
         // Return config as-is
         OtherConfig(config.map { case (k, v) => k -> v.toString })
     }
+  }
+
+  /**
+   * Reads data from Avro files.
+   *
+   * @param config Configuration including path, inferSchema
+   * @param spark  SparkSession
+   * @return DataFrame containing Avro data
+   */
+  def fromAvro(config: Map[String, Any], spark: SparkSession): DataFrame = {
+    logger.info("Extracting from Avro")
+
+    require(config.contains("path"), "'path' is required")
+
+    val path = config("path").toString
+    AvroConverter.readAvro(path, config)(spark)
   }
 }

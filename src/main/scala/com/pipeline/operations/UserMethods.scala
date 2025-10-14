@@ -2,6 +2,7 @@ package com.pipeline.operations
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.{Logger, LoggerFactory}
+import com.pipeline.avro.AvroConverter
 
 /**
  * User-facing transformation methods.
@@ -335,5 +336,45 @@ object UserMethods {
     }
 
     logger.info(s"Business rule validation passed for ${rules.size} rules")
+  }
+
+  // ==================== AVRO CONVERSION METHODS ====================
+
+  /**
+   * Converts DataFrame schema to Avro schema.
+   *
+   * @param df     Input DataFrame
+   * @param config Configuration with "namespace" and "name"
+   * @param spark  SparkSession
+   * @return DataFrame with avro_schema column containing the schema JSON
+   */
+  def toAvroSchema(df: DataFrame, config: Map[String, Any], spark: SparkSession): DataFrame = {
+    logger.info("Converting DataFrame schema to Avro schema")
+
+    val namespace = config.getOrElse("namespace", "com.pipeline").toString
+    val name = config.getOrElse("name", "Record").toString
+
+    val avroSchema = AvroConverter.dataFrameToAvroSchema(df, namespace, name)
+
+    // Return DataFrame with schema as a single-row, single-column result
+    import spark.implicits._
+    Seq(avroSchema).toDF("avro_schema")
+  }
+
+  /**
+   * Evolves DataFrame schema to match target Avro schema.
+   *
+   * @param df     Input DataFrame
+   * @param config Configuration with "targetSchema" (Avro JSON)
+   * @param spark  SparkSession
+   * @return DataFrame with evolved schema
+   */
+  def evolveAvroSchema(df: DataFrame, config: Map[String, Any], spark: SparkSession): DataFrame = {
+    logger.info("Evolving DataFrame schema to match target Avro schema")
+
+    require(config.contains("targetSchema"), "'targetSchema' is required")
+
+    val targetSchema = config("targetSchema").toString
+    AvroConverter.evolveSchema(df, targetSchema)(spark)
   }
 }

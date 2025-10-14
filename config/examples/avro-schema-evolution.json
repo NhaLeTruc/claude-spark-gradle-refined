@@ -1,0 +1,43 @@
+{
+  "name": "avro-schema-evolution-pipeline",
+  "mode": "batch",
+  "steps": [
+    {
+      "type": "extract",
+      "method": "fromAvro",
+      "config": {
+        "path": "/data/legacy/events-v1/",
+        "registerAs": "legacy_events"
+      }
+    },
+    {
+      "type": "transform",
+      "method": "evolveAvroSchema",
+      "config": {
+        "targetSchema": "{\"type\":\"record\",\"name\":\"Event\",\"namespace\":\"com.pipeline\",\"fields\":[{\"name\":\"id\",\"type\":\"long\"},{\"name\":\"event_type\",\"type\":\"string\"},{\"name\":\"amount\",\"type\":\"double\"},{\"name\":\"timestamp\",\"type\":\"long\"},{\"name\":\"user_id\",\"type\":\"long\"},{\"name\":\"new_field\",\"type\":[\"null\",\"string\"],\"default\":null}]}"
+      }
+    },
+    {
+      "type": "validate",
+      "method": "validateSchema",
+      "config": {
+        "expectedColumns": [
+          {"name": "id", "type": "long"},
+          {"name": "event_type", "type": "string"},
+          {"name": "amount", "type": "double"},
+          {"name": "user_id", "type": "long"},
+          {"name": "new_field", "type": "string"}
+        ]
+      }
+    },
+    {
+      "type": "load",
+      "method": "toAvro",
+      "config": {
+        "path": "/data/current/events-v2/",
+        "mode": "overwrite",
+        "compression": "snappy"
+      }
+    }
+  ]
+}
