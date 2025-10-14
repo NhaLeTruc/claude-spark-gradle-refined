@@ -1,0 +1,79 @@
+{
+  "name": "data-quality-validation-pipeline",
+  "mode": "batch",
+  "steps": [
+    {
+      "type": "extract",
+      "method": "fromS3",
+      "config": {
+        "bucket": "data-lake",
+        "path": "/raw/transactions/",
+        "format": "parquet",
+        "credentialPath": "secret/data/s3/production",
+        "registerAs": "transactions"
+      }
+    },
+    {
+      "type": "validate",
+      "method": "validateSchema",
+      "config": {
+        "expectedColumns": [
+          {"name": "transaction_id", "type": "long"},
+          {"name": "customer_id", "type": "long"},
+          {"name": "amount", "type": "double"},
+          {"name": "transaction_date", "type": "date"},
+          {"name": "status", "type": "string"}
+        ]
+      }
+    },
+    {
+      "type": "validate",
+      "method": "validateNulls",
+      "config": {
+        "notNullColumns": ["transaction_id", "customer_id", "amount", "transaction_date"]
+      }
+    },
+    {
+      "type": "validate",
+      "method": "validateRanges",
+      "config": {
+        "ranges": {
+          "amount": {
+            "min": 0.01,
+            "max": 1000000
+          },
+          "customer_id": {
+            "min": 1
+          }
+        }
+      }
+    },
+    {
+      "type": "validate",
+      "method": "validateBusinessRules",
+      "config": {
+        "rules": [
+          "status IN ('pending', 'completed', 'failed', 'refunded')",
+          "amount > 0",
+          "transaction_date <= current_date()"
+        ]
+      }
+    },
+    {
+      "type": "transform",
+      "method": "filterRows",
+      "config": {
+        "condition": "status = 'completed'"
+      }
+    },
+    {
+      "type": "load",
+      "method": "toDeltaLake",
+      "config": {
+        "path": "/data/delta/validated_transactions",
+        "mode": "append",
+        "partitionBy": ["transaction_date"]
+      }
+    }
+  ]
+}

@@ -4,16 +4,52 @@ A production-ready Apache Spark-based data pipeline orchestration framework that
 
 ## 🚀 Features
 
+### Core Capabilities
 - **No-Code Pipeline Creation**: Define complex ETL/ELT pipelines using JSON configuration files
 - **Secure Credential Management**: Integration with HashiCorp Vault for zero-credentials-in-config security
-- **Multi-Source Support**: Extract from PostgreSQL, MySQL, Kafka, S3, DeltaLake
-- **Multi-Sink Support**: Load to PostgreSQL, MySQL, Kafka, S3, DeltaLake
-- **Advanced Transformations**: Filter, join, aggregate, reshape, union operations
-- **Multi-DataFrame Operations**: Support for complex joins across multiple data sources
 - **Dual Execution Mode**: Run locally via CLI or deploy to Spark clusters via spark-submit
-- **Automatic Retry Logic**: Built-in retry with configurable attempts and delays (default: 3 attempts, 5s delay)
-- **Streaming Support**: Real-time data processing from Kafka
-- **Observability**: Structured JSON logging with MDC correlation IDs
+- **Automatic Retry Logic**: Built-in fault tolerance with configurable attempts and delays (default: 3 attempts, 5s delay)
+- **Multi-DataFrame Operations**: Support for complex joins across multiple registered data sources
+- **Observability**: Structured JSON logging with MDC correlation IDs for request tracing
+
+### Data Sources (Extract) - 6 Methods
+- **PostgreSQL**: JDBC with partitioning, query/table support, connection pooling
+- **MySQL**: JDBC with partitioning, query/table support, connection pooling
+- **Kafka**: Batch and streaming modes with configurable offsets
+- **S3**: Multi-format support (Parquet, JSON, CSV, Avro, ORC) with IAM authentication
+- **DeltaLake**: Time travel support (version and timestamp-based reads)
+- **Avro**: Native Avro file support with schema inference
+
+### Data Sinks (Load) - 6 Methods
+- **PostgreSQL**: Batch writes with configurable batch sizes, multiple save modes
+- **MySQL**: Batch writes with configurable batch sizes, multiple save modes
+- **Kafka**: JSON serialization with automatic key/value column handling
+- **S3**: Multi-format writes with partitioning, compression (Snappy, GZIP, LZ4, ZSTD)
+- **DeltaLake**: Schema merge/overwrite support, partitioning, ACID transactions
+- **Avro**: Compression and partitioning support
+
+### Transformations - 8 Methods
+- **filterRows**: SQL WHERE conditions via DataFrame.filter()
+- **enrichData**: Add computed columns using SQL expressions
+- **joinDataFrames**: Multi-DataFrame joins with multiple join types
+- **aggregateData**: GroupBy with sum, avg, count, min, max aggregations
+- **reshapeData**: Pivot operations with custom aggregations
+- **unionDataFrames**: DataFrame unions with optional deduplication
+- **toAvroSchema**: Generate Avro JSON schema from DataFrame structure
+- **evolveAvroSchema**: Schema evolution with automatic column addition/removal
+
+### Validations - 5 Methods
+- **validateSchema**: Column name and type validation with detailed error reporting
+- **validateNulls**: NOT NULL constraint checking with violation counts
+- **validateRanges**: Min/max value validation for numeric columns
+- **validateReferentialIntegrity**: Foreign key validation across DataFrames
+- **validateBusinessRules**: Custom SQL rule validation with violation tracking
+
+### Avro Support (NEW)
+- **Schema Evolution**: Forward/backward compatibility checking
+- **Type-Safe Conversion**: Automatic Avro ↔ Spark DataType mapping
+- **Compression**: Snappy, Deflate, Bzip2, XZ codec support
+- **Parquet Integration**: Efficient storage with embedded Avro metadata
 
 ## 📋 Requirements
 
@@ -321,17 +357,40 @@ Structured JSON logging with correlation IDs:
 
 Copyright © 2025. All rights reserved.
 
+## 📚 Additional Documentation
+
+- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)**: Complete implementation details and statistics
+- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)**: Production deployment instructions
+- **[PERFORMANCE_GUIDE.md](PERFORMANCE_GUIDE.md)**: Optimization techniques and best practices
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)**: Common issues and solutions
+- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)**: One-page cheat sheet
+
+### Example Pipelines
+
+All examples located in `config/examples/`:
+
+- **[simple-etl.json](config/examples/simple-etl.json)**: Basic PostgreSQL → Transform → S3 pipeline
+- **[multi-source-join.json](config/examples/multi-source-join.json)**: Multi-source join (PostgreSQL + MySQL)
+- **[streaming-kafka.json](config/examples/streaming-kafka.json)**: Real-time Kafka streaming pipeline
+- **[avro-etl.json](config/examples/avro-etl.json)**: Avro format pipeline with compression
+- **[avro-schema-evolution.json](config/examples/avro-schema-evolution.json)**: Schema evolution example
+- **[data-quality-pipeline.json](config/examples/data-quality-pipeline.json)**: Comprehensive data validation
+- **[incremental-load-pipeline.json](config/examples/incremental-load-pipeline.json)**: Incremental processing pattern
+- **[aggregation-pipeline.json](config/examples/aggregation-pipeline.json)**: Complex aggregations with pivot
+
 ## 🤝 Contributing
 
 This is a demonstration project. See `specs/` directory for full specifications and design documents.
 
 ## 📞 Support
 
-For issues and questions, refer to the project specifications in `specs/001-build-an-application/`.
+For issues and questions, refer to:
+- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for common issues
+- Project specifications in `specs/001-build-an-application/`
 
 ---
 
-**Status**: MVP Phase Complete ✅
-**Tests**: 151 passing
-**Coverage**: Foundational components at 100%
-**Next**: Phase 5 (US2 - Complex Pipelines), Phase 6 (US3 - Streaming), Phase 7 (US5 - Docker Compose)
+**Status**: Production Ready ✅ (Phases 1-5, 8, 9 Complete)
+**Tests**: 151 passing (100% success rate)
+**Build**: Shadow JAR (456MB) for cluster deployment
+**Documentation**: Complete with performance, troubleshooting, and deployment guides
