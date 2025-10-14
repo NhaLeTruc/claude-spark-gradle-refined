@@ -211,8 +211,20 @@ case class ValidateStep(
 
     val df = context.getPrimaryDataFrame
 
+    // Resolve referenced DataFrames if needed (for referential integrity)
+    val enrichedConfig = config.get("referencedDataFrame") match {
+      case Some(refName: String) =>
+        logger.info(s"Resolving referenced DataFrame: $refName")
+        val refDf = context.get(refName).getOrElse(
+          throw new IllegalStateException(s"Referenced DataFrame '$refName' not found in context")
+        )
+        config ++ Map("resolvedReferencedDataFrame" -> refDf)
+      case _ =>
+        config
+    }
+
     // Validation logic will be implemented by UserMethods
-    validateData(df, config, spark)
+    validateData(df, enrichedConfig, spark)
 
     // Validation doesn't modify data, just checks it
     context

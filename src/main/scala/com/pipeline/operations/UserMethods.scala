@@ -60,8 +60,8 @@ object UserMethods {
   /**
    * Joins multiple DataFrames.
    *
-   * @param df     Primary DataFrame (not used, uses context)
-   * @param config Configuration with "inputDataFrames" list, "joinType", "joinConditions"
+   * @param df     Primary DataFrame (not used, uses resolvedDataFrames from config)
+   * @param config Configuration with "inputDataFrames" list, "joinType", "joinConditions", and "resolvedDataFrames"
    * @param spark  SparkSession
    * @return Joined DataFrame
    */
@@ -70,18 +70,34 @@ object UserMethods {
 
     require(config.contains("inputDataFrames"), "'inputDataFrames' list is required")
     require(config.contains("joinConditions"), "'joinConditions' list is required")
+    require(config.contains("resolvedDataFrames"), "DataFrames must be resolved by TransformStep")
 
     val inputDfNames = config("inputDataFrames").asInstanceOf[List[String]]
     val joinConditions = config("joinConditions").asInstanceOf[List[String]]
     val joinType = config.getOrElse("joinType", "inner").toString
+    val resolvedDFs = config("resolvedDataFrames").asInstanceOf[Map[String, DataFrame]]
 
     require(inputDfNames.size >= 2, "At least 2 DataFrames required for join")
     require(joinConditions.size == inputDfNames.size - 1, "Need N-1 join conditions for N DataFrames")
 
-    // Note: This requires PipelineContext to be passed or DataFrames resolved elsewhere
-    // For now, return df as placeholder - will be fixed in PipelineStep integration
-    logger.warn("joinDataFrames requires PipelineContext - will be integrated in PipelineStep")
-    df
+    // Get DataFrames in order
+    val dataFrames = inputDfNames.map { name =>
+      resolvedDFs.getOrElse(name,
+        throw new IllegalStateException(s"DataFrame '$name' not found in resolved DataFrames")
+      )
+    }
+
+    import org.apache.spark.sql.functions.expr
+
+    // Perform sequential joins
+    var result = dataFrames.head
+    dataFrames.tail.zip(joinConditions).foreach { case (rightDf, condition) =>
+      logger.info(s"Joining with condition: $condition (type: $joinType)")
+      result = result.join(rightDf, expr(condition), joinType)
+    }
+
+    logger.info(s"Successfully joined ${inputDfNames.size} DataFrames")
+    result
   }
 
   /**
@@ -154,8 +170,31 @@ object UserMethods {
         }
 
       case "unpivot" =>
-        logger.warn("Unpivot not yet implemented - returning original DataFrame")
-        df
+        require(config.contains("valueCols"), "'valueCols' is required for unpivot")
+        require(config.contains("variableColName"), "'variableColName' is required for unpivot")
+        require(config.contains("valueColName"), "'valueColName' is required for unpivot")
+
+        val valueCols = config("valueCols").asInstanceOf[List[String]]
+        val variableColName = config("variableColName").toString
+        val valueColName = config("valueColName").toString
+        val idCols = config.get("idCols").map(_.asInstanceOf[List[String]]).getOrElse(
+          df.columns.filterNot(valueCols.contains).toList
+        )
+
+        import org.apache.spark.sql.functions._
+
+        // Build stack expression: stack(n, 'col1', col1, 'col2', col2, ...)
+        val stackExpr = valueCols.map(col => s"'$col', `$col`").mkString(", ")
+        val numCols = valueCols.length
+
+        // Select id columns plus the unpivoted columns
+        val selectCols = idCols.mkString(", ") match {
+          case "" => s"stack($numCols, $stackExpr) as ($variableColName, $valueColName)"
+          case ids => s"$ids, stack($numCols, $stackExpr) as ($variableColName, $valueColName)"
+        }
+
+        logger.info(s"Unpivoting ${valueCols.size} columns to ($variableColName, $valueColName)")
+        df.selectExpr(selectCols.split(", "): _*)
 
       case _ =>
         throw new IllegalArgumentException(s"Invalid reshape operation: $operation. Must be 'pivot' or 'unpivot'")
@@ -165,18 +204,44 @@ object UserMethods {
   /**
    * Unions multiple DataFrames.
    *
-   * @param df     Primary DataFrame
-   * @param config Configuration with "inputDataFrames" list, "distinct" flag
+   * @param df     Primary DataFrame (starting point for union)
+   * @param config Configuration with "inputDataFrames" list, "distinct" flag, and "resolvedDataFrames"
    * @param spark  SparkSession
    * @return Unioned DataFrame
    */
   def unionDataFrames(df: DataFrame, config: Map[String, Any], spark: SparkSession): DataFrame = {
     logger.info("Unioning DataFrames")
 
-    // Note: This requires PipelineContext to resolve registered DataFrames
-    // Will be integrated in PipelineStep
-    logger.warn("unionDataFrames requires PipelineContext - will be integrated in PipelineStep")
-    df
+    require(config.contains("inputDataFrames"), "'inputDataFrames' list is required")
+    require(config.contains("resolvedDataFrames"), "DataFrames must be resolved by TransformStep")
+
+    val inputDfNames = config("inputDataFrames").asInstanceOf[List[String]]
+    val distinct = config.getOrElse("distinct", false).asInstanceOf[Boolean]
+    val resolvedDFs = config("resolvedDataFrames").asInstanceOf[Map[String, DataFrame]]
+
+    // Get DataFrames to union
+    val dataFrames = inputDfNames.map { name =>
+      resolvedDFs.getOrElse(name,
+        throw new IllegalStateException(s"DataFrame '$name' not found in resolved DataFrames")
+      )
+    }
+
+    // Union all DataFrames
+    var result = df
+    dataFrames.foreach { nextDf =>
+      result = result.union(nextDf)
+    }
+
+    // Apply distinct if requested
+    val finalResult = if (distinct) {
+      logger.info("Applying distinct to unioned DataFrame")
+      result.distinct()
+    } else {
+      result
+    }
+
+    logger.info(s"Successfully unioned ${inputDfNames.size + 1} DataFrames (distinct=$distinct)")
+    finalResult
   }
 
   // ==================== VALIDATION METHODS ====================
@@ -295,20 +360,47 @@ object UserMethods {
    * Validates referential integrity.
    *
    * @param df     Input DataFrame
-   * @param config Configuration with "foreignKey", "referencedDataFrame", "referencedColumn"
+   * @param config Configuration with "foreignKey", "referencedDataFrame", "referencedColumn", and "resolvedReferencedDataFrame"
    * @param spark  SparkSession
    */
   def validateReferentialIntegrity(df: DataFrame, config: Map[String, Any], spark: SparkSession): Unit = {
     logger.info("Validating referential integrity")
 
-    // Note: This requires PipelineContext to resolve referenced DataFrame
-    logger.warn("validateReferentialIntegrity requires PipelineContext - will be integrated in PipelineStep")
-
     require(config.contains("foreignKey"), "'foreignKey' column is required")
     require(config.contains("referencedDataFrame"), "'referencedDataFrame' is required")
     require(config.contains("referencedColumn"), "'referencedColumn' is required")
+    require(config.contains("resolvedReferencedDataFrame"), "Referenced DataFrame must be resolved by ValidateStep")
 
-    // Placeholder - will be implemented with context integration
+    val foreignKey = config("foreignKey").toString
+    val referencedDfName = config("referencedDataFrame").toString
+    val referencedColumn = config("referencedColumn").toString
+    val referencedDf = config("resolvedReferencedDataFrame").asInstanceOf[DataFrame]
+
+    import org.apache.spark.sql.functions._
+
+    // Find foreign key values that don't exist in referenced column
+    val orphanedRecords = df
+      .select(col(foreignKey))
+      .filter(col(foreignKey).isNotNull)  // Only check non-null foreign keys
+      .distinct()
+      .join(
+        referencedDf.select(col(referencedColumn)).distinct(),
+        df(foreignKey) === referencedDf(referencedColumn),
+        "left_anti"  // Find values in left that don't exist in right
+      )
+
+    val violationCount = orphanedRecords.count()
+
+    if (violationCount > 0) {
+      // Sample some orphaned values for debugging
+      val sample = orphanedRecords.take(5).map(_.get(0)).mkString(", ")
+      throw new IllegalStateException(
+        s"Referential integrity validation failed: $violationCount orphaned records in '$foreignKey' " +
+        s"not found in '$referencedDfName.$referencedColumn'. Sample values: $sample"
+      )
+    }
+
+    logger.info(s"Referential integrity validation passed for '$foreignKey' -> '$referencedDfName.$referencedColumn'")
   }
 
   /**
