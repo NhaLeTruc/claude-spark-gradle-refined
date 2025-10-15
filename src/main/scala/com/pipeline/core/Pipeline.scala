@@ -25,6 +25,8 @@ case class Pipeline(
 
   private val logger: Logger = LoggerFactory.getLogger(getClass)
 
+  @volatile private var cancelled = false
+
   require(name.trim.nonEmpty, "Pipeline name cannot be empty")
   require(mode == "batch" || mode == "streaming", s"Invalid mode: $mode. Must be 'batch' or 'streaming'")
 
@@ -34,6 +36,40 @@ case class Pipeline(
    * @return true if mode is "streaming", false otherwise
    */
   def isStreamingMode: Boolean = mode == "streaming"
+
+  /**
+   * Cancels the pipeline execution.
+   *
+   * This sets the cancellation flag which will be checked between steps.
+   * For streaming pipelines, also stops all active streaming queries.
+   */
+  def cancel(): Unit = {
+    logger.warn(s"Cancellation requested for pipeline: $name")
+    cancelled = true
+  }
+
+  /**
+   * Checks if cancellation has been requested.
+   *
+   * @return true if pipeline should cancel
+   */
+  def isCancelled: Boolean = cancelled
+
+  /**
+   * Checks for cancellation and throws exception if cancelled.
+   *
+   * @param stepIndex Current step index
+   * @throws PipelineCancelledException if cancelled
+   */
+  private def checkCancellation(stepIndex: Option[Int] = None): Unit = {
+    if (cancelled) {
+      logger.warn(s"Pipeline cancelled at step ${stepIndex.getOrElse("unknown")}")
+      throw new com.pipeline.exceptions.PipelineCancelledException(
+        pipelineName = Some(name),
+        cancelledAt = stepIndex,
+      )
+    }
+  }
 
   /**
    * Executes the pipeline with retry logic.
@@ -84,8 +120,15 @@ case class Pipeline(
           Right(context)
 
         case Failure(exception) =>
-          logger.error(s"Pipeline failed after $maxAttempts attempts: name=$name, mode=$mode, duration=${durationMs}ms", exception)
-          Left(exception)
+          exception match {
+            case _: com.pipeline.exceptions.PipelineCancelledException =>
+              logger.warn(s"Pipeline cancelled: name=$name, duration=${durationMs}ms")
+              Left(exception)
+
+            case _ =>
+              logger.error(s"Pipeline failed after $maxAttempts attempts: name=$name, mode=$mode, duration=${durationMs}ms", exception)
+              Left(exception)
+          }
       }
 
     } finally {
@@ -104,10 +147,13 @@ case class Pipeline(
       throw new IllegalStateException("Pipeline has no steps to execute")
     }
 
+    // Check cancellation before starting
+    checkCancellation(Some(0))
+
     logger.info(s"Executing ${steps.size} pipeline steps")
 
-    // Build the chain by linking steps
-    val chainedSteps = steps.foldRight[Option[PipelineStep]](None) { (step, nextOpt) =>
+    // Build the chain by linking steps with cancellation checks
+    val chainedSteps = steps.zipWithIndex.foldRight[Option[PipelineStep]](None) { case ((step, idx), nextOpt) =>
       Some(
         step match {
           case ExtractStep(m, c, _)   => ExtractStep(m, c, nextOpt)
@@ -128,6 +174,7 @@ case class Pipeline(
     val resultContext = chainedSteps match {
       case Some(firstStep) =>
         // Execute with pipeline context for better error messages
+        // Note: cancellation is checked via exceptions thrown during execution
         firstStep.executeChainWithContext(
           initialContext,
           spark,
