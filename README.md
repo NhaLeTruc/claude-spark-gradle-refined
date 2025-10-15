@@ -357,13 +357,33 @@ Structured JSON logging with correlation IDs:
 
 Copyright © 2025. All rights reserved.
 
-## 📚 Additional Documentation
+## 📚 Documentation
 
-- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)**: Complete implementation details and statistics
-- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)**: Production deployment instructions
-- **[PERFORMANCE_GUIDE.md](PERFORMANCE_GUIDE.md)**: Optimization techniques and best practices
-- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)**: Common issues and solutions
-- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)**: One-page cheat sheet
+**Complete documentation is available in the [`docs/`](docs/) directory**:
+
+### Quick Links
+- **[📖 Getting Started](docs/guides/GETTING_STARTED.md)** - 5-minute quick start
+- **[📘 Documentation Index](docs/README.md)** - Complete documentation hub
+- **[🔧 API Reference](docs/api/)** - ScalaDoc API documentation
+- **[🏛️ Architecture Decisions (ADRs)](docs/adr/)** - Design decision records
+
+### Feature Documentation
+- **[Streaming Infrastructure](docs/features/STREAMING_INFRASTRUCTURE_COMPLETE.md)** - Dual-mode execution
+- **[Error Handling](docs/features/ERROR_HANDLING_COMPLETE.md)** - Custom exception hierarchy
+- **[Performance Features](docs/features/PERFORMANCE_FEATURES_COMPLETE.md)** - Caching & repartitioning
+- **[Metrics Collection](docs/features/METRICS_COLLECTION_COMPLETE.md)** - Monitoring & observability
+- **[Security Enhancements](docs/features/SECURITY_ENHANCEMENTS_COMPLETE.md)** - Vault-only mode & auditing
+- **[Integration Testing](docs/features/INTEGRATION_TESTING_COMPLETE.md)** - Testcontainers & E2E tests
+- **[Technical Debt Report](docs/features/TECHNICAL_DEBT_REPORT.md)** - Current status & improvements
+
+### Generate Documentation
+```bash
+# Generate ScalaDoc API documentation
+./gradlew scaladoc
+
+# Generate all documentation
+./gradlew documentation
+```
 
 ### Example Pipelines
 
