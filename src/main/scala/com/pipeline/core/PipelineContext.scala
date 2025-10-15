@@ -3,6 +3,7 @@ package com.pipeline.core
 import org.apache.avro.generic.GenericRecord
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.streaming.StreamingQuery
+import org.apache.spark.storage.StorageLevel
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable
@@ -12,17 +13,20 @@ import scala.collection.mutable
  *
  * Supports multi-DataFrame operations for complex transformations (FR-007, FR-023).
  * Supports streaming query management for continuous processing (FR-009).
+ * Supports DataFrame caching for performance optimization (FR-020).
  * Implements Constitution Section V: Library-First Architecture.
  *
  * @param primary          Either Avro GenericRecord or Spark DataFrame representing the primary data flow
  * @param dataFrames       Named registry of DataFrames for multi-DataFrame operations
  * @param streamingQueries Named registry of StreamingQuery objects for lifecycle management
+ * @param cachedDataFrames Set of names of DataFrames that have been cached
  * @param isStreamingMode  Flag indicating if pipeline is executing in streaming mode
  */
 case class PipelineContext(
     primary: Either[GenericRecord, DataFrame],
     dataFrames: mutable.Map[String, DataFrame] = mutable.Map.empty,
     streamingQueries: mutable.Map[String, StreamingQuery] = mutable.Map.empty,
+    cachedDataFrames: mutable.Set[String] = mutable.Set.empty,
     isStreamingMode: Boolean = false,
 ) {
 
@@ -192,6 +196,109 @@ case class PipelineContext(
    */
   def hasActiveStreams: Boolean = {
     streamingQueries.values.exists(_.isActive)
+  }
+
+  /**
+   * Caches a DataFrame with the specified storage level.
+   *
+   * @param name         Name of the DataFrame to cache
+   * @param storageLevel Storage level (default: MEMORY_AND_DISK)
+   * @return Updated context
+   */
+  def cache(name: String, storageLevel: StorageLevel = StorageLevel.MEMORY_AND_DISK): PipelineContext = {
+    dataFrames.get(name) match {
+      case Some(df) =>
+        logger.info(s"Caching DataFrame '$name' with storage level: $storageLevel")
+        df.persist(storageLevel)
+        cachedDataFrames.add(name)
+        this
+      case None =>
+        logger.warn(s"Cannot cache DataFrame '$name' - not found in registry")
+        this
+    }
+  }
+
+  /**
+   * Caches the primary DataFrame with the specified storage level.
+   *
+   * @param storageLevel Storage level (default: MEMORY_AND_DISK)
+   * @return Updated context
+   */
+  def cachePrimary(storageLevel: StorageLevel = StorageLevel.MEMORY_AND_DISK): PipelineContext = {
+    primary match {
+      case Right(df) =>
+        logger.info(s"Caching primary DataFrame with storage level: $storageLevel")
+        df.persist(storageLevel)
+        cachedDataFrames.add("__primary__")
+        this
+      case Left(_) =>
+        logger.warn("Cannot cache primary - it's an Avro GenericRecord, not a DataFrame")
+        this
+    }
+  }
+
+  /**
+   * Uncaches a DataFrame and removes it from memory.
+   *
+   * @param name Name of the DataFrame to uncache
+   * @return Updated context
+   */
+  def uncache(name: String): PipelineContext = {
+    dataFrames.get(name) match {
+      case Some(df) =>
+        logger.info(s"Uncaching DataFrame '$name'")
+        df.unpersist(blocking = false)
+        cachedDataFrames.remove(name)
+        this
+      case None =>
+        logger.warn(s"Cannot uncache DataFrame '$name' - not found in registry")
+        this
+    }
+  }
+
+  /**
+   * Uncaches all cached DataFrames.
+   *
+   * @param blocking Whether to block until unpersist completes (default: false)
+   * @return Updated context
+   */
+  def uncacheAll(blocking: Boolean = false): PipelineContext = {
+    if (cachedDataFrames.nonEmpty) {
+      logger.info(s"Uncaching ${cachedDataFrames.size} DataFrames")
+
+      cachedDataFrames.foreach { name =>
+        if (name == "__primary__") {
+          primary match {
+            case Right(df) => df.unpersist(blocking)
+            case Left(_) => // Skip Avro
+          }
+        } else {
+          dataFrames.get(name).foreach(_.unpersist(blocking))
+        }
+      }
+
+      cachedDataFrames.clear()
+    }
+    this
+  }
+
+  /**
+   * Checks if a DataFrame is cached.
+   *
+   * @param name Name of the DataFrame
+   * @return True if cached
+   */
+  def isCached(name: String): Boolean = {
+    cachedDataFrames.contains(name)
+  }
+
+  /**
+   * Gets all cached DataFrame names.
+   *
+   * @return Set of cached DataFrame names
+   */
+  def cachedNames: Set[String] = {
+    cachedDataFrames.toSet
   }
 }
 

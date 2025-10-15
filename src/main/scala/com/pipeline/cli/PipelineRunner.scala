@@ -50,11 +50,29 @@ object PipelineRunner {
         // Create pipeline
         val pipeline = Pipeline.fromConfig(pipelineConfig)
 
+        // Register shutdown hook for graceful cancellation
+        val shutdownHook = new Thread("pipeline-shutdown-hook") {
+          override def run(): Unit = {
+            logger.warn("Shutdown signal received, cancelling pipeline...")
+            pipeline.cancel()
+          }
+        }
+        Runtime.getRuntime.addShutdownHook(shutdownHook)
+
         // Execute pipeline
         logger.info(s"Executing pipeline: ${pipelineConfig.name}")
         val startTime = System.currentTimeMillis()
 
-        pipeline.execute(spark) match {
+        val result = pipeline.execute(spark)
+
+        // Remove shutdown hook if completed normally
+        try {
+          Runtime.getRuntime.removeShutdownHook(shutdownHook)
+        } catch {
+          case _: IllegalStateException => // Already shutting down
+        }
+
+        result match {
           case Right(context) =>
             val duration = System.currentTimeMillis() - startTime
             logger.info(s"✅ Pipeline completed successfully in ${duration}ms")

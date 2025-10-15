@@ -217,6 +217,21 @@ class RetryableException(
 }
 
 /**
+ * Exception thrown when a pipeline is cancelled.
+ *
+ * @param pipelineName Name of the cancelled pipeline
+ * @param cancelledAt  Step index where cancellation occurred
+ */
+class PipelineCancelledException(
+    pipelineName: Option[String] = None,
+    val cancelledAt: Option[Int] = None,
+) extends PipelineException(
+      message = "Pipeline execution cancelled",
+      pipelineName = pipelineName,
+      stepIndex = cancelledAt,
+    )
+
+/**
  * Companion object with helper methods for exception detection and message building.
  */
 object PipelineException {

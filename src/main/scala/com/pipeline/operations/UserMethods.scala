@@ -469,4 +469,84 @@ object UserMethods {
     val targetSchema = config("targetSchema").toString
     AvroConverter.evolveSchema(df, targetSchema)(spark)
   }
+
+  /**
+   * Repartitions DataFrame by number of partitions.
+   *
+   * @param df     Input DataFrame
+   * @param config Configuration with "numPartitions" (Int)
+   * @param spark  SparkSession
+   * @return Repartitioned DataFrame
+   */
+  def repartition(df: DataFrame, config: Map[String, Any], spark: SparkSession): DataFrame = {
+    logger.info("Repartitioning DataFrame")
+
+    require(config.contains("numPartitions"), "'numPartitions' is required")
+
+    val numPartitions = config("numPartitions") match {
+      case n: Int => n
+      case n: String => n.toInt
+      case n => n.toString.toInt
+    }
+
+    logger.info(s"Repartitioning to $numPartitions partitions")
+    df.repartition(numPartitions)
+  }
+
+  /**
+   * Repartitions DataFrame by column expressions.
+   *
+   * @param df     Input DataFrame
+   * @param config Configuration with "numPartitions" (Int, optional) and "columns" (List[String])
+   * @param spark  SparkSession
+   * @return Repartitioned DataFrame
+   */
+  def repartitionByColumns(df: DataFrame, config: Map[String, Any], spark: SparkSession): DataFrame = {
+    logger.info("Repartitioning DataFrame by columns")
+
+    require(config.contains("columns"), "'columns' is required")
+
+    val columns = config("columns") match {
+      case list: List[_] => list.map(_.toString)
+      case col: String => List(col)
+      case _ => throw new IllegalArgumentException("'columns' must be a List or String")
+    }
+
+    val numPartitions = config.get("numPartitions").map {
+      case n: Int => n
+      case n: String => n.toInt
+      case n => n.toString.toInt
+    }
+
+    logger.info(s"Repartitioning by columns: ${columns.mkString(", ")}" +
+      numPartitions.map(n => s" into $n partitions").getOrElse(""))
+
+    numPartitions match {
+      case Some(n) => df.repartition(n, columns.map(df(_)): _*)
+      case None => df.repartition(columns.map(df(_)): _*)
+    }
+  }
+
+  /**
+   * Coalesces DataFrame to reduce number of partitions.
+   *
+   * @param df     Input DataFrame
+   * @param config Configuration with "numPartitions" (Int)
+   * @param spark  SparkSession
+   * @return Coalesced DataFrame
+   */
+  def coalesce(df: DataFrame, config: Map[String, Any], spark: SparkSession): DataFrame = {
+    logger.info("Coalescing DataFrame")
+
+    require(config.contains("numPartitions"), "'numPartitions' is required")
+
+    val numPartitions = config("numPartitions") match {
+      case n: Int => n
+      case n: String => n.toInt
+      case n => n.toString.toInt
+    }
+
+    logger.info(s"Coalescing to $numPartitions partitions")
+    df.coalesce(numPartitions)
+  }
 }

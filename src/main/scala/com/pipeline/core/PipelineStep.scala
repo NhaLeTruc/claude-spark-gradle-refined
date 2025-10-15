@@ -1,6 +1,7 @@
 package com.pipeline.core
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.storage.StorageLevel
 import org.slf4j.{Logger, LoggerFactory}
 import com.pipeline.operations.{ExtractMethods, LoadMethods, UserMethods}
 import com.pipeline.exceptions._
@@ -139,12 +140,29 @@ case class ExtractStep(
     val df = extractData(spark, isStreaming)
 
     // Register DataFrame if registerAs is specified
-    val updatedContext = config.get("registerAs") match {
+    val contextWithDF = config.get("registerAs") match {
       case Some(name) =>
         logger.info(s"Registering DataFrame as: $name")
         context.register(name.toString, df).updatePrimary(Right(df))
       case None =>
         context.updatePrimary(Right(df))
+    }
+
+    // Cache DataFrame if cache is enabled
+    val updatedContext = config.get("cache") match {
+      case Some(true) | Some("true") =>
+        val registerName = config.get("registerAs").map(_.toString).getOrElse("__primary__")
+        val storageLevel = PipelineStepUtils.parseStorageLevel(config.getOrElse("cacheStorageLevel", "MEMORY_AND_DISK").toString)
+
+        logger.info(s"Caching DataFrame with storage level: $storageLevel")
+        if (registerName == "__primary__") {
+          contextWithDF.cachePrimary(storageLevel)
+        } else {
+          contextWithDF.cache(registerName, storageLevel)
+        }
+
+      case _ =>
+        contextWithDF
     }
 
     updatedContext
@@ -243,6 +261,9 @@ case class TransformStep(
       case "unionDataFrames" => UserMethods.unionDataFrames(df, cfg, spark)
       case "toAvroSchema" => UserMethods.toAvroSchema(df, cfg, spark)
       case "evolveAvroSchema" => UserMethods.evolveAvroSchema(df, cfg, spark)
+      case "repartition" => UserMethods.repartition(df, cfg, spark)
+      case "repartitionByColumns" => UserMethods.repartitionByColumns(df, cfg, spark)
+      case "coalesce" => UserMethods.coalesce(df, cfg, spark)
       case _ => throw new IllegalArgumentException(s"Unknown transform method: $method")
     }
   }
@@ -370,6 +391,41 @@ case class LoadStep(
       case "toDeltaLake" => LoadMethods.toDeltaLake(df, config, spark, isStreaming)
       case "toAvro" => LoadMethods.toAvro(df, config, spark); None
       case _ => throw new IllegalArgumentException(s"Unknown load method: $method")
+    }
+  }
+
+}
+
+/**
+ * Helper object for pipeline step utilities.
+ */
+object PipelineStepUtils {
+
+  private val logger: Logger = LoggerFactory.getLogger(getClass)
+
+  /**
+   * Parses storage level string to StorageLevel object.
+   *
+   * @param level Storage level string (e.g., "MEMORY_AND_DISK")
+   * @return StorageLevel object
+   */
+  def parseStorageLevel(level: String): StorageLevel = {
+    level.toUpperCase match {
+      case "NONE" => StorageLevel.NONE
+      case "DISK_ONLY" => StorageLevel.DISK_ONLY
+      case "DISK_ONLY_2" => StorageLevel.DISK_ONLY_2
+      case "MEMORY_ONLY" => StorageLevel.MEMORY_ONLY
+      case "MEMORY_ONLY_2" => StorageLevel.MEMORY_ONLY_2
+      case "MEMORY_ONLY_SER" => StorageLevel.MEMORY_ONLY_SER
+      case "MEMORY_ONLY_SER_2" => StorageLevel.MEMORY_ONLY_SER_2
+      case "MEMORY_AND_DISK" => StorageLevel.MEMORY_AND_DISK
+      case "MEMORY_AND_DISK_2" => StorageLevel.MEMORY_AND_DISK_2
+      case "MEMORY_AND_DISK_SER" => StorageLevel.MEMORY_AND_DISK_SER
+      case "MEMORY_AND_DISK_SER_2" => StorageLevel.MEMORY_AND_DISK_SER_2
+      case "OFF_HEAP" => StorageLevel.OFF_HEAP
+      case _ =>
+        logger.warn(s"Unknown storage level: $level, defaulting to MEMORY_AND_DISK")
+        StorageLevel.MEMORY_AND_DISK
     }
   }
 }
