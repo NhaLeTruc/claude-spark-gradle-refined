@@ -127,7 +127,13 @@ case class Pipeline(
 
     val resultContext = chainedSteps match {
       case Some(firstStep) =>
-        firstStep.executeChain(initialContext, spark)
+        // Execute with pipeline context for better error messages
+        firstStep.executeChainWithContext(
+          initialContext,
+          spark,
+          pipelineName = Some(name),
+          stepIndex = Some(0),
+        )
       case None =>
         throw new IllegalStateException("Failed to build pipeline chain")
     }
