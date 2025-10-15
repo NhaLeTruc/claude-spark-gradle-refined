@@ -3,6 +3,7 @@ package com.pipeline.core
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.{Logger, LoggerFactory}
 import com.pipeline.operations.{ExtractMethods, LoadMethods, UserMethods}
+import com.pipeline.exceptions._
 
 /**
  * Sealed trait for pipeline steps implementing Chain of Responsibility pattern.
@@ -35,28 +36,78 @@ sealed trait PipelineStep {
   /**
    * Executes this step and chains to next step if present.
    *
-   * Implements Chain of Responsibility pattern.
+   * Implements Chain of Responsibility pattern with exception handling.
    *
    * @param context Current pipeline context
    * @param spark   SparkSession
    * @return Final pipeline context after chain execution
+   * @throws PipelineException if execution fails
    */
   def executeChain(context: PipelineContext, spark: SparkSession): PipelineContext = {
+    executeChainWithContext(context, spark, pipelineName = None, stepIndex = None)
+  }
+
+  /**
+   * Internal method for executing chain with context information.
+   *
+   * @param context      Current pipeline context
+   * @param spark        SparkSession
+   * @param pipelineName Name of the pipeline (for error context)
+   * @param stepIndex    Index of this step (for error context)
+   * @return Final pipeline context after chain execution
+   * @throws PipelineException if execution fails
+   */
+  private[core] def executeChainWithContext(
+      context: PipelineContext,
+      spark: SparkSession,
+      pipelineName: Option[String],
+      stepIndex: Option[Int],
+  ): PipelineContext = {
     val logger = LoggerFactory.getLogger(getClass)
+    val stepType = getStepType
 
     logger.info(s"Executing step: ${this.getClass.getSimpleName}, method: $method")
 
-    val updatedContext = execute(context, spark)
+    try {
+      val updatedContext = execute(context, spark)
 
-    nextStep match {
-      case Some(next) =>
-        logger.info(s"Chaining to next step: ${next.getClass.getSimpleName}")
-        next.executeChain(updatedContext, spark)
+      nextStep match {
+        case Some(next) =>
+          logger.info(s"Chaining to next step: ${next.getClass.getSimpleName}")
+          val nextIndex = stepIndex.map(_ + 1).orElse(Some(1))
+          next.executeChainWithContext(updatedContext, spark, pipelineName, nextIndex)
 
-      case None =>
-        logger.info("End of chain reached")
-        updatedContext
+        case None =>
+          logger.info("End of chain reached")
+          updatedContext
+      }
+    } catch {
+      case pe: PipelineException =>
+        // Already a pipeline exception, just re-throw
+        throw pe
+
+      case ex: Throwable =>
+        // Wrap with pipeline context
+        logger.error(s"Error executing step $stepType.$method", ex)
+        throw PipelineException.wrapException(
+          ex,
+          pipelineName = pipelineName,
+          stepIndex = stepIndex,
+          stepType = Some(stepType),
+          method = Some(method),
+          config = Some(config),
+        )
     }
+  }
+
+  /**
+   * Get the step type name (extract, transform, validate, load).
+   */
+  private def getStepType: String = this match {
+    case _: ExtractStep => "extract"
+    case _: TransformStep => "transform"
+    case _: ValidateStep => "validate"
+    case _: LoadStep => "load"
   }
 }
 
@@ -148,7 +199,14 @@ case class TransformStep(
 
         if (resolvedDFs.size != dfNames.size) {
           val missing = dfNames.filterNot(resolvedDFs.contains)
-          throw new IllegalStateException(s"Missing required DataFrames: ${missing.mkString(", ")}")
+          val available = context.dataFrames.keySet.toSet
+          // Throw first missing DataFrame as exception
+          throw new DataFrameResolutionException(
+            referenceName = missing.head,
+            availableNames = available,
+            stepType = Some("transform"),
+            method = Some(method),
+          )
         }
 
         config ++ Map("resolvedDataFrames" -> resolvedDFs)
@@ -217,9 +275,15 @@ case class ValidateStep(
     val enrichedConfig = config.get("referencedDataFrame") match {
       case Some(refName: String) =>
         logger.info(s"Resolving referenced DataFrame: $refName")
-        val refDf = context.get(refName).getOrElse(
-          throw new IllegalStateException(s"Referenced DataFrame '$refName' not found in context")
-        )
+        val refDf = context.get(refName).getOrElse {
+          val available = context.dataFrames.keySet.toSet
+          throw new DataFrameResolutionException(
+            referenceName = refName,
+            availableNames = available,
+            stepType = Some("validate"),
+            method = Some(method),
+          )
+        }
         config ++ Map("resolvedReferencedDataFrame" -> refDf)
       case _ =>
         config
