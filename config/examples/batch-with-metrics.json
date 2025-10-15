@@ -1,0 +1,43 @@
+{
+  "name": "batch-pipeline-with-metrics",
+  "mode": "batch",
+  "steps": [
+    {
+      "type": "extract",
+      "method": "fromS3",
+      "config": {
+        "bucket": "my-data-bucket",
+        "path": "input/users.parquet",
+        "format": "parquet",
+        "credentialPath": "secret/data/s3"
+      }
+    },
+    {
+      "type": "transform",
+      "method": "filterRows",
+      "config": {
+        "condition": "age >= 18 AND status = 'active'"
+      }
+    },
+    {
+      "type": "transform",
+      "method": "enrichData",
+      "config": {
+        "columns": {
+          "is_adult": "age >= 18",
+          "account_age_days": "datediff(current_date(), created_at)",
+          "risk_score": "CASE WHEN age < 25 THEN 'HIGH' WHEN age < 40 THEN 'MEDIUM' ELSE 'LOW' END"
+        }
+      }
+    },
+    {
+      "type": "load",
+      "method": "toDeltaLake",
+      "config": {
+        "path": "s3a://data-lake/delta/users_processed",
+        "mode": "overwrite",
+        "credentialPath": "secret/data/s3"
+      }
+    }
+  ]
+}

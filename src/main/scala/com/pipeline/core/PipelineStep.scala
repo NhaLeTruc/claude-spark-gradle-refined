@@ -51,10 +51,11 @@ sealed trait PipelineStep {
   /**
    * Internal method for executing chain with context information.
    *
-   * @param context      Current pipeline context
-   * @param spark        SparkSession
-   * @param pipelineName Name of the pipeline (for error context)
-   * @param stepIndex    Index of this step (for error context)
+   * @param context       Current pipeline context
+   * @param spark         SparkSession
+   * @param pipelineName  Name of the pipeline (for error context)
+   * @param stepIndex     Index of this step (for error context)
+   * @param metricsCollector Optional metrics collector
    * @return Final pipeline context after chain execution
    * @throws PipelineException if execution fails
    */
@@ -63,20 +64,28 @@ sealed trait PipelineStep {
       spark: SparkSession,
       pipelineName: Option[String],
       stepIndex: Option[Int],
+      metricsCollector: Option[com.pipeline.metrics.PipelineMetrics] = None,
   ): PipelineContext = {
     val logger = LoggerFactory.getLogger(getClass)
     val stepType = getStepType
+    val currentStepIndex = stepIndex.getOrElse(0)
 
     logger.info(s"Executing step: ${this.getClass.getSimpleName}, method: $method")
 
+    // Record step start
+    metricsCollector.foreach(_.startStep(currentStepIndex, stepType, method))
+
     try {
       val updatedContext = execute(context, spark)
+
+      // Record step completion (basic metrics - can be enhanced with actual counts)
+      metricsCollector.foreach(_.endStep(currentStepIndex))
 
       nextStep match {
         case Some(next) =>
           logger.info(s"Chaining to next step: ${next.getClass.getSimpleName}")
           val nextIndex = stepIndex.map(_ + 1).orElse(Some(1))
-          next.executeChainWithContext(updatedContext, spark, pipelineName, nextIndex)
+          next.executeChainWithContext(updatedContext, spark, pipelineName, nextIndex, metricsCollector)
 
         case None =>
           logger.info("End of chain reached")
@@ -84,10 +93,14 @@ sealed trait PipelineStep {
       }
     } catch {
       case pe: PipelineException =>
+        // Record step failure
+        metricsCollector.foreach(_.failStep(currentStepIndex, pe.getMessage))
         // Already a pipeline exception, just re-throw
         throw pe
 
       case ex: Throwable =>
+        // Record step failure
+        metricsCollector.foreach(_.failStep(currentStepIndex, ex.getMessage))
         // Wrap with pipeline context
         logger.error(s"Error executing step $stepType.$method", ex)
         throw PipelineException.wrapException(

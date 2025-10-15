@@ -1,5 +1,6 @@
 package com.pipeline.core
 
+import com.pipeline.metrics.PipelineMetrics
 import com.pipeline.retry.RetryStrategy
 import org.apache.spark.sql.SparkSession
 import org.slf4j.{Logger, LoggerFactory, MDC}
@@ -26,6 +27,9 @@ case class Pipeline(
   private val logger: Logger = LoggerFactory.getLogger(getClass)
 
   @volatile private var cancelled = false
+
+  // Metrics collector
+  private var metricsCollector: Option[PipelineMetrics] = None
 
   require(name.trim.nonEmpty, "Pipeline name cannot be empty")
   require(mode == "batch" || mode == "streaming", s"Invalid mode: $mode. Must be 'batch' or 'streaming'")
@@ -77,13 +81,20 @@ case class Pipeline(
    * @param spark         SparkSession
    * @param maxAttempts   Maximum retry attempts (default: 3)
    * @param delayMillis   Delay between retries in milliseconds (default: 5000)
+   * @param collectMetrics Enable metrics collection (default: true)
    * @return Success or Failure
    */
   def execute(
       spark: SparkSession,
       maxAttempts: Int = 3,
       delayMillis: Long = 5000,
+      collectMetrics: Boolean = true,
   ): Either[Throwable, PipelineContext] = {
+
+    // Initialize metrics collector
+    if (collectMetrics) {
+      metricsCollector = Some(PipelineMetrics(name, mode))
+    }
 
     // Set MDC for structured logging
     MDC.put("pipelineName", name)
@@ -111,6 +122,9 @@ case class Pipeline(
 
       result match {
         case Success(context) =>
+          // Mark pipeline as completed
+          metricsCollector.foreach(_.complete())
+
           if (isStreamingMode) {
             logger.info(s"Streaming pipeline setup completed: name=$name, setupTime=${durationMs}ms")
             logger.info(s"Streaming pipeline is now running continuously...")
@@ -122,10 +136,12 @@ case class Pipeline(
         case Failure(exception) =>
           exception match {
             case _: com.pipeline.exceptions.PipelineCancelledException =>
+              metricsCollector.foreach(_.cancel())
               logger.warn(s"Pipeline cancelled: name=$name, duration=${durationMs}ms")
               Left(exception)
 
             case _ =>
+              metricsCollector.foreach(_.fail(exception.getMessage))
               logger.error(s"Pipeline failed after $maxAttempts attempts: name=$name, mode=$mode, duration=${durationMs}ms", exception)
               Left(exception)
           }
@@ -180,6 +196,7 @@ case class Pipeline(
           spark,
           pipelineName = Some(name),
           stepIndex = Some(0),
+          metricsCollector = metricsCollector,
         )
       case None =>
         throw new IllegalStateException("Failed to build pipeline chain")
@@ -198,6 +215,13 @@ case class Pipeline(
 
     resultContext
   }
+
+  /**
+   * Gets the collected metrics for this pipeline execution.
+   *
+   * @return Optional PipelineMetrics
+   */
+  def getMetrics: Option[PipelineMetrics] = metricsCollector
 }
 
 /**
