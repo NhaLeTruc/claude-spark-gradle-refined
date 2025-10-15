@@ -244,7 +244,7 @@ tasks.register('contractTest', Test) {
 
 // Task to run only performance tests
 tasks.register('performanceTest', Test) {
-    useJUnitPlatform()
+    useJUnit()
     testClassesDirs = sourceSets.test.output.classesDirs
     classpath = sourceSets.test.runtimeClasspath
 
@@ -255,8 +255,56 @@ tasks.register('performanceTest', Test) {
     // Performance tests need more resources
     maxHeapSize = '4g'
     timeout = Duration.ofMinutes(15)
+
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+        showStandardStreams = true
+    }
+
+    // JVM options for tests (same as main test task)
+    jvmArgs = test.jvmArgs
 }
 
 tasks.named('build') {
     dependsOn shadowJar
+}
+
+// ScalaDoc generation - configure existing task created by scala plugin
+tasks.named('scaladoc', ScalaDoc) {
+    description = 'Generates ScalaDoc API documentation'
+    group = 'documentation'
+
+    source = sourceSets.main.scala
+    classpath = sourceSets.main.runtimeClasspath
+    destinationDir = file('docs/api')
+
+    scalaDocOptions.additionalParameters = [
+        '-doc-title', 'Data Pipeline Orchestration Application',
+        '-doc-version', version,
+        '-doc-footer', 'Generated on ' + new Date().format('yyyy-MM-dd'),
+        '-diagrams',
+        '-groups',
+        '-implicits',
+        '-deprecation'
+    ]
+
+    doLast {
+        logger.lifecycle("ScalaDoc generated at: ${destinationDir}")
+    }
+}
+
+// Generate docs as part of documentation
+tasks.register('documentation') {
+    description = 'Generates all project documentation'
+    group = 'documentation'
+    dependsOn scaladoc
+
+    doLast {
+        logger.lifecycle("Documentation generated in docs/")
+        logger.lifecycle("  - API docs: docs/api/")
+        logger.lifecycle("  - Features: docs/features/")
+        logger.lifecycle("  - ADRs: docs/adr/")
+        logger.lifecycle("  - Guides: docs/guides/")
+    }
 }
