@@ -3,6 +3,7 @@ plugins {
     id 'application'
     id 'com.gradleup.shadow' version '9.0.0-beta4'
     id 'jacoco'
+    id 'cz.augi.gradle.scalafmt' version '1.21.5'
 }
 
 group = 'com.pipeline'
@@ -54,6 +55,7 @@ ext {
 dependencies {
     // Scala
     implementation "org.scala-lang:scala-library:${scalaLibVersion}"
+    // implementation 'org.scala-sbt:zinc-compile-core_2.13:1.9.3'
 
     // Spark (provided scope for cluster mode, included for local CLI mode)
     implementation "org.apache.spark:spark-core_${scalaVersion}:${sparkVersion}"
@@ -95,12 +97,14 @@ dependencies {
     testImplementation "org.scalatestplus:mockito-4-11_${scalaVersion}:${scalatestVersion}.0"
     testImplementation "org.scalatestplus:junit-4-13_${scalaVersion}:${scalatestVersion}.0"
     testImplementation "junit:junit:4.13.2"
+    testImplementation "org.junit.platform:junit-platform-launcher:1.13.4"
     testImplementation "org.testcontainers:testcontainers:${testcontainersVersion}"
     testImplementation "org.testcontainers:postgresql:${testcontainersVersion}"
     testImplementation "org.testcontainers:mysql:${testcontainersVersion}"
     testImplementation "org.testcontainers:kafka:${testcontainersVersion}"
     testImplementation "org.mockito:mockito-core:${mockitoVersion}"
     testRuntimeOnly "org.scala-lang.modules:scala-xml_${scalaVersion}:2.1.0"
+    testRuntimeOnly "org.junit.vintage:junit-vintage-engine:5.10.0"
 }
 
 application {
@@ -173,6 +177,13 @@ jacocoTestCoverageVerification {
             }
         }
     }
+}
+
+scalafmt {
+    // .scalafmt.conf in the project root is default value, provide only if other location is needed
+    // config file has to be relative path from current project or root project in case of multimodule projects
+    // example usage: 
+    // configFilePath = ".scalafmt.conf"
 }
 
 test {
