@@ -96,6 +96,9 @@ src/main/scala/com/pipeline/
 ### 1. Build the Project
 
 ```bash
+# Optional run gradle wrapper if your gradle version is higher
+gradle wrapper
+
 # Build standard JAR (includes Spark for local execution)
 ./gradlew build
 
@@ -284,6 +287,9 @@ spark-submit \
 ## 🧪 Testing
 
 ```bash
+# Optional run gradle wrapper if your gradle version is higher
+gradle wrapper
+
 # Run all tests
 ./gradlew test
 
