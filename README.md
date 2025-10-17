@@ -350,7 +350,7 @@ Structured JSON logging with correlation IDs:
 ./gradlew scalafmtAll
 
 # Check formatting
-./gradlew scalafmtCheck
+./gradlew checkScalafmtAll
 ```
 
 ### Project Structure

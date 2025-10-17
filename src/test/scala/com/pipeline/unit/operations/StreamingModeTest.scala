@@ -15,6 +15,7 @@ import org.scalatest.matchers.should.Matchers
  * - Mode detection during execution
  * - Streaming vs batch behavior differences
  */
+// @RunWith(classOf[JUnitRunner])
 class StreamingModeTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
 
   private var spark: SparkSession = _

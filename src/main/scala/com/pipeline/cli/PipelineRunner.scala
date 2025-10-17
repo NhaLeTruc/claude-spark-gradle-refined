@@ -83,6 +83,8 @@ object PipelineRunner {
             val duration = System.currentTimeMillis() - startTime
             logger.error(s"❌ Pipeline failed after ${duration}ms", error)
             System.exit(1)
+
+          case _ => println("Something unexpected happened")
         }
 
       } finally {

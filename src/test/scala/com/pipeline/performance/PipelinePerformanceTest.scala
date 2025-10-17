@@ -14,6 +14,7 @@ import org.apache.spark.storage.StorageLevel
  * - Transform operation performance
  * - Metrics collection overhead
  */
+// @RunWith(classOf[JUnitRunner])
 class PipelinePerformanceTest extends PerformanceTestBase {
 
   behavior of "Pipeline Performance"
