@@ -300,6 +300,8 @@ class PerformanceMetric(val name: String) {
 
   def p99: Long = percentile(99)
 
+  def getMeasurements: Seq[Long] = measurements.toSeq
+
   private def percentile(p: Int): Long = {
     if (measurements.isEmpty) return 0L
     val sorted = measurements.sorted
