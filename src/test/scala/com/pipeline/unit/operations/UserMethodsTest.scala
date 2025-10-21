@@ -176,4 +176,114 @@ class UserMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
     joined.count() shouldBe 2
     joined.columns should contain allOf ("user_id", "name", "order_id", "amount")
   }
+
+  // === ACTUAL EXECUTION TESTS FOR COVERAGE ===
+
+  test("UserMethods.filterRows should actually filter data") {
+    val sparkImplicits = spark.implicits
+    import sparkImplicits._
+    import com.pipeline.operations.UserMethods
+
+    val df = Seq((1, "Alice", 25), (2, "Bob", 17), (3, "Charlie", 30))
+      .toDF("id", "name", "age")
+
+    val config = Map("condition" -> "age > 18")
+
+    val result = UserMethods.filterRows(df, config, spark)
+
+    result.count() shouldBe 2
+  }
+
+  test("UserMethods.enrichData should actually add columns") {
+    val sparkImplicits = spark.implicits
+    import sparkImplicits._
+    import com.pipeline.operations.UserMethods
+
+    val df = Seq(("Alice", "Smith", 25), ("Bob", "Jones", 30))
+      .toDF("first_name", "last_name", "age")
+
+    val config = Map(
+      "columns" -> Map(
+        "full_name" -> "concat(first_name, ' ', last_name)",
+        "is_adult" -> "age >= 18"
+      )
+    )
+
+    val result = UserMethods.enrichData(df, config, spark)
+
+    result.columns should contain allOf ("full_name", "is_adult")
+    result.count() shouldBe 2
+  }
+
+  test("UserMethods.aggregateData should actually aggregate data") {
+    val sparkImplicits = spark.implicits
+    import sparkImplicits._
+    import com.pipeline.operations.UserMethods
+
+    val df = Seq(
+      ("Electronics", "North", 100.0),
+      ("Electronics", "South", 200.0),
+      ("Books", "North", 50.0),
+      ("Books", "South", 75.0)
+    ).toDF("category", "region", "amount")
+
+    val config = Map(
+      "groupBy" -> List("category"),
+      "aggregations" -> Map(
+        "amount" -> "sum",
+        "category" -> "count"
+      )
+    )
+
+    val result = UserMethods.aggregateData(df, config, spark)
+
+    result.count() shouldBe 2 // Two categories
+    result.columns should contain allOf ("category", "amount_sum", "category_count")
+  }
+
+  test("UserMethods.unionDataFrames should actually union DataFrames") {
+    val sparkImplicits = spark.implicits
+    import sparkImplicits._
+    import com.pipeline.operations.UserMethods
+
+    val df0 = Seq((1, "Alice")).toDF("id", "name") // Primary
+    val df1 = Seq((2, "Bob")).toDF("id", "name")
+    val df2 = Seq((3, "Charlie"), (4, "Diana")).toDF("id", "name")
+    val df3 = Seq((5, "Eve")).toDF("id", "name")
+
+    val config = Map(
+      "inputDataFrames" -> List("df1", "df2", "df3"),
+      "resolvedDataFrames" -> Map("df1" -> df1, "df2" -> df2, "df3" -> df3)
+    )
+
+    val result = UserMethods.unionDataFrames(df0, config, spark)
+
+    result.count() shouldBe 5 // df0(1) + df1(1) + df2(2) + df3(1) = 5
+  }
+
+  test("UserMethods.reshapeData should actually pivot data") {
+    val sparkImplicits = spark.implicits
+    import sparkImplicits._
+    import com.pipeline.operations.UserMethods
+
+    val df = Seq(
+      ("Product1", "Q1", 100.0),
+      ("Product1", "Q2", 150.0),
+      ("Product2", "Q1", 200.0),
+      ("Product2", "Q2", 250.0)
+    ).toDF("product", "quarter", "sales")
+
+    val config = Map(
+      "operation" -> "pivot",
+      "pivotColumn" -> "quarter",
+      "groupByColumns" -> List("product"),
+      "valueColumn" -> "sales",
+      "aggFunction" -> "sum"
+    )
+
+    val result = UserMethods.reshapeData(df, config, spark)
+
+    result.count() shouldBe 2 // Two products
+    result.columns should contain("product")
+  }
 }

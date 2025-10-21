@@ -131,4 +131,36 @@ class PipelineTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
     // Pipeline is a case class, so it's immutable
     pipeline shouldBe a[Pipeline]
   }
+
+  test("Pipeline.cancel should set cancelled flag") {
+    val pipeline = Pipeline(name = "cancel-test", mode = "batch", steps = List.empty)
+
+    pipeline.isCancelled shouldBe false
+    pipeline.cancel()
+    pipeline.isCancelled shouldBe true
+  }
+
+  test("Pipeline.isStreamingMode should return true for streaming pipelines") {
+    val batchPipeline = Pipeline(name = "batch", mode = "batch", steps = List.empty)
+    val streamingPipeline = Pipeline(name = "streaming", mode = "streaming", steps = List.empty)
+
+    batchPipeline.isStreamingMode shouldBe false
+    streamingPipeline.isStreamingMode shouldBe true
+  }
+
+  test("Pipeline should throw exception for invalid mode") {
+    intercept[IllegalArgumentException] {
+      Pipeline(name = "test", mode = "invalid", steps = List.empty)
+    }
+  }
+
+  test("Pipeline should throw exception for empty name") {
+    intercept[IllegalArgumentException] {
+      Pipeline(name = "", mode = "batch", steps = List.empty)
+    }
+
+    intercept[IllegalArgumentException] {
+      Pipeline(name = "   ", mode = "batch", steps = List.empty)
+    }
+  }
 }
