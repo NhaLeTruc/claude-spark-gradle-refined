@@ -142,4 +142,5 @@ class ExtractMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAl
     jdbcConfig.jdbcUrl should include("localhost:5432")
     jdbcConfig.jdbcUrl should include("testdb")
   }
+
 }

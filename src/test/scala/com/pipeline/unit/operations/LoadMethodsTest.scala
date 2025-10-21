@@ -150,4 +150,5 @@ class LoadMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
     val s3Path = s"s3a://${config("bucket")}${config("path")}"
     s3Path should startWith("s3a://")
   }
+
 }

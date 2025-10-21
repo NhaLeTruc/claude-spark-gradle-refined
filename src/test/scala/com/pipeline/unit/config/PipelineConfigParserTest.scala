@@ -217,4 +217,117 @@ class PipelineConfigParserTest extends AnyFunSuite with Matchers {
       PipelineConfigParser.validate(config)
     }
   }
+
+  test("PipelineConfigParser.parseFile should read configuration from file") {
+    import java.nio.file.{Files, Paths}
+
+    // Create a temporary JSON file
+    val json =
+      """
+        |{
+        |  "name": "file-based-pipeline",
+        |  "mode": "batch",
+        |  "steps": [
+        |    {
+        |      "type": "extract",
+        |      "method": "fromPostgres",
+        |      "config": {"table": "users"}
+        |    }
+        |  ]
+        |}
+        |""".stripMargin
+
+    val tempFile = Files.createTempFile("pipeline-config-", ".json")
+    try {
+      Files.write(tempFile, json.getBytes)
+
+      val config = PipelineConfigParser.parseFile(tempFile.toString)
+
+      config.name shouldBe "file-based-pipeline"
+      config.mode shouldBe "batch"
+      config.steps should have size 1
+    } finally {
+      Files.deleteIfExists(tempFile)
+    }
+  }
+
+  test("PipelineConfigParser.validate should validate correct configuration") {
+    val json =
+      """
+        |{
+        |  "name": "valid-pipeline",
+        |  "mode": "batch",
+        |  "steps": [
+        |    {
+        |      "type": "extract",
+        |      "method": "fromPostgres",
+        |      "config": {"table": "users"}
+        |    }
+        |  ]
+        |}
+        |""".stripMargin
+
+    val config = PipelineConfigParser.parse(json)
+
+    // Should not throw
+    noException should be thrownBy {
+      PipelineConfigParser.validate(config)
+    }
+  }
+
+  test("PipelineConfigParser should handle nested config objects") {
+    val json =
+      """
+        |{
+        |  "name": "nested-config",
+        |  "mode": "batch",
+        |  "steps": [
+        |    {
+        |      "type": "extract",
+        |      "method": "fromS3",
+        |      "config": {
+        |        "bucket": "data-lake",
+        |        "path": "/raw/users",
+        |        "format": "parquet",
+        |        "options": {
+        |          "mergeSchema": "true",
+        |          "compression": "snappy"
+        |        }
+        |      }
+        |    }
+        |  ]
+        |}
+        |""".stripMargin
+
+    val config = PipelineConfigParser.parse(json)
+    val stepConfig = config.steps.head.config
+
+    stepConfig should contain key "options"
+  }
+
+  test("PipelineConfigParser should handle array values in config") {
+    val json =
+      """
+        |{
+        |  "name": "array-config",
+        |  "mode": "batch",
+        |  "steps": [
+        |    {
+        |      "type": "transform",
+        |      "method": "selectColumns",
+        |      "config": {
+        |        "columns": ["id", "name", "email"]
+        |      }
+        |    }
+        |  ]
+        |}
+        |""".stripMargin
+
+    val config = PipelineConfigParser.parse(json)
+    val stepConfig = config.steps.head.config
+
+    stepConfig should contain key "columns"
+    val columns = stepConfig("columns").asInstanceOf[List[String]]
+    columns should contain allOf ("id", "name", "email")
+  }
 }
