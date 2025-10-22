@@ -77,8 +77,8 @@ trait PerformanceTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterA
    */
   protected def measureTime[T](name: String)(operation: => T): (T, Long) = {
     val startTime = System.currentTimeMillis()
-    val result = operation
-    val duration = System.currentTimeMillis() - startTime
+    val result    = operation
+    val duration  = System.currentTimeMillis() - startTime
 
     logger.info(s"[$name] Completed in ${duration}ms")
     result -> duration
@@ -99,7 +99,7 @@ trait PerformanceTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterA
     performanceMetrics.get(name) match {
       case Some(metric) =>
         metric.addMeasurement(duration)
-      case None =>
+      case None         =>
         val metric = new PerformanceMetric(name)
         metric.addMeasurement(duration)
         performanceMetrics(name) = metric
@@ -132,7 +132,7 @@ trait PerformanceTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterA
     performanceMetrics.get(name) match {
       case Some(metric) =>
         metric.addMeasurement(duration, throughput)
-      case None =>
+      case None         =>
         val metric = new PerformanceMetric(name)
         metric.addMeasurement(duration, throughput)
         performanceMetrics(name) = metric
@@ -208,8 +208,8 @@ trait PerformanceTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterA
     val schema = org.apache.spark.sql.types.StructType(
       org.apache.spark.sql.types.StructField("id", org.apache.spark.sql.types.IntegerType, nullable = false) +:
         (0 until columns).map(i =>
-          org.apache.spark.sql.types.StructField(s"col$i", org.apache.spark.sql.types.StringType, nullable = true)
-        )
+          org.apache.spark.sql.types.StructField(s"col$i", org.apache.spark.sql.types.StringType, nullable = true),
+        ),
     )
 
     spark.createDataFrame(spark.sparkContext.parallelize(data), schema)
@@ -221,8 +221,9 @@ trait PerformanceTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterA
    * @param rows Number of rows (default: 1 million)
    * @return Test DataFrame
    */
-  protected def createLargeTestDataFrame(rows: Int = 1000000): DataFrame = {
-    spark.range(rows)
+  protected def createLargeTestDataFrame(rows: Int = 1000000): DataFrame =
+    spark
+      .range(rows)
       .selectExpr(
         "id",
         "cast(id % 1000 as string) as category",
@@ -230,12 +231,11 @@ trait PerformanceTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterA
         "cast(rand() * 100 as double) as value2",
         "cast(current_timestamp() as timestamp) as created_at",
       )
-  }
 
   /**
    * Prints performance summary.
    */
-  protected def printPerformanceSummary(): Unit = {
+  protected def printPerformanceSummary(): Unit =
     if (performanceMetrics.nonEmpty) {
       logger.info("=" * 80)
       logger.info("PERFORMANCE TEST SUMMARY")
@@ -256,14 +256,12 @@ trait PerformanceTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterA
 
       logger.info("=" * 80)
     }
-  }
 
   /**
    * Clears performance metrics.
    */
-  protected def clearMetrics(): Unit = {
+  protected def clearMetrics(): Unit =
     performanceMetrics.clear()
-  }
 
   /**
    * Measures resource utilization during operation execution.
@@ -287,7 +285,7 @@ trait PerformanceTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterA
 
     val duration = System.currentTimeMillis() - startTime
     val memAfter = runtime.totalMemory() - runtime.freeMemory()
-    val memUsed = math.max(0, memAfter - memBefore)
+    val memUsed  = math.max(0, memAfter - memBefore)
 
     val metrics = ResourceMetrics(
       durationMs = duration,
@@ -323,7 +321,7 @@ trait PerformanceTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterA
     val result = operation
 
     val wallTime = System.currentTimeMillis() - startTime
-    val cpuTime = (threadBean.getCurrentThreadCpuTime - cpuBefore) / 1000000 // Convert to ms
+    val cpuTime  = (threadBean.getCurrentThreadCpuTime - cpuBefore) / 1000000 // Convert to ms
 
     val cpuUtilization = if (wallTime > 0) (cpuTime.toDouble / wallTime) * 100 else 0.0
 
@@ -347,7 +345,7 @@ case class ResourceMetrics(
  */
 class PerformanceMetric(val name: String) {
   private val measurements = mutable.ListBuffer[Long]()
-  private val throughputs = mutable.ListBuffer[Double]()
+  private val throughputs  = mutable.ListBuffer[Double]()
 
   def addMeasurement(durationMs: Long, throughput: Double = 0.0): Unit = {
     measurements += durationMs
@@ -390,7 +388,7 @@ class PerformanceMetric(val name: String) {
     if (measurements.size == 1) return measurements.head
 
     val sorted = measurements.sorted
-    val index = math.ceil((p / 100.0) * sorted.size).toInt - 1
+    val index  = math.ceil((p / 100.0) * sorted.size).toInt - 1
     sorted(math.max(0, math.min(index, sorted.size - 1)))
   }
 }
