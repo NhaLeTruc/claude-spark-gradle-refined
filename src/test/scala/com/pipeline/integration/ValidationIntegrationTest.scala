@@ -60,10 +60,10 @@ class ValidationIntegrationTest extends IntegrationTestBase {
           method = "validateSchema",
           config = Map(
             "expectedColumns" -> List(
-              Map("name" -> "id", "type"    -> "IntegerType"),
-              Map("name" -> "name", "type"  -> "StringType"),
-              Map("name" -> "age", "type"   -> "IntegerType"),
-              Map("name" -> "email", "type" -> "StringType"),
+              Map("name" -> "id", "type"    -> "integer"),
+              Map("name" -> "name", "type"  -> "string"),
+              Map("name" -> "age", "type"   -> "integer"),
+              Map("name" -> "email", "type" -> "string"),
             ),
           ),
           nextStep = None,
