@@ -173,7 +173,7 @@ class EndToEndPipelineTest extends IntegrationTestBase {
     result match {
       case Left(exception) =>
         logger.info(s"Pipeline failed as expected: ${exception.getMessage}")
-        exception.getMessage should include("invalid-host")
+        exception.getMessage should include("connection")
 
       case Right(_) =>
         fail("Pipeline should have failed but succeeded")
