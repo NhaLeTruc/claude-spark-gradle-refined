@@ -52,7 +52,7 @@ class VaultClientTest extends AnyFunSuite with Matchers {
       case Some(_) =>
         val client = VaultClient.fromEnv()
         client shouldBe a[VaultClient]
-      case None =>
+      case None    =>
         info("Skipping test - VAULT_ADDR not set")
         succeed
     }
@@ -61,8 +61,8 @@ class VaultClientTest extends AnyFunSuite with Matchers {
   test("VaultClient should parse secret data correctly") {
     // Mock secret data structure
     val secretData = Map(
-      "host" -> "localhost",
-      "port" -> "5432",
+      "host"     -> "localhost",
+      "port"     -> "5432",
       "database" -> "testdb",
       "username" -> "user",
       "password" -> "pass",
@@ -74,7 +74,7 @@ class VaultClientTest extends AnyFunSuite with Matchers {
   }
 
   test("VaultClient should handle authentication errors") {
-    val vaultAddr = sys.env.getOrElse("VAULT_ADDR", "http://localhost:8200")
+    val vaultAddr     = sys.env.getOrElse("VAULT_ADDR", "http://localhost:8200")
     val invalidClient = VaultClient(vaultAddr, "invalid-token-12345")
 
     val result = invalidClient.readSecret("secret/data/test")
@@ -84,7 +84,7 @@ class VaultClientTest extends AnyFunSuite with Matchers {
 
   test("VaultClient should support custom namespaces") {
     val vaultAddr = sys.env.getOrElse("VAULT_ADDR", "http://localhost:8200")
-    val token = sys.env.getOrElse("VAULT_TOKEN", "test-token")
+    val token     = sys.env.getOrElse("VAULT_TOKEN", "test-token")
 
     val client = VaultClient(vaultAddr, token, Some("custom-namespace"))
 

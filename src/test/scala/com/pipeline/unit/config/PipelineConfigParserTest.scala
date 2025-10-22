@@ -124,7 +124,7 @@ class PipelineConfigParserTest extends AnyFunSuite with Matchers {
 
     val transformStep = config.steps.head
     transformStep.config should contain key "inputDataFrames"
-    val inputDfs = transformStep.config("inputDataFrames").asInstanceOf[List[String]]
+    val inputDfs      = transformStep.config("inputDataFrames").asInstanceOf[List[String]]
     inputDfs should contain allOf ("users", "orders")
   }
 
@@ -246,9 +246,7 @@ class PipelineConfigParserTest extends AnyFunSuite with Matchers {
       config.name shouldBe "file-based-pipeline"
       config.mode shouldBe "batch"
       config.steps should have size 1
-    } finally {
-      Files.deleteIfExists(tempFile)
-    }
+    } finally Files.deleteIfExists(tempFile)
   }
 
   test("PipelineConfigParser.validate should validate correct configuration") {
@@ -299,7 +297,7 @@ class PipelineConfigParserTest extends AnyFunSuite with Matchers {
         |}
         |""".stripMargin
 
-    val config = PipelineConfigParser.parse(json)
+    val config     = PipelineConfigParser.parse(json)
     val stepConfig = config.steps.head.config
 
     stepConfig should contain key "options"
@@ -323,7 +321,7 @@ class PipelineConfigParserTest extends AnyFunSuite with Matchers {
         |}
         |""".stripMargin
 
-    val config = PipelineConfigParser.parse(json)
+    val config     = PipelineConfigParser.parse(json)
     val stepConfig = config.steps.head.config
 
     stepConfig should contain key "columns"

@@ -19,7 +19,7 @@ class ExtractStepTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
 
   @transient private var spark: SparkSession = _
 
-  override def beforeAll(): Unit = {
+  override def beforeAll(): Unit =
     spark = SparkSession
       .builder()
       .appName("ExtractStepTest")
@@ -27,13 +27,11 @@ class ExtractStepTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
       .config("spark.ui.enabled", "false")
       .config("spark.sql.shuffle.partitions", "2")
       .getOrCreate()
-  }
 
-  override def afterAll(): Unit = {
+  override def afterAll(): Unit =
     if (spark != null) {
       spark.stop()
     }
-  }
 
   test("ExtractStep should store method name") {
     val step = ExtractStep(method = "fromPostgres", config = Map("table" -> "users"), nextStep = None)
@@ -43,10 +41,10 @@ class ExtractStepTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
 
   test("ExtractStep should store configuration") {
     val config = Map(
-      "table" -> "users",
+      "table"          -> "users",
       "credentialPath" -> "secret/data/postgres",
     )
-    val step = ExtractStep(method = "fromPostgres", config = config, nextStep = None)
+    val step   = ExtractStep(method = "fromPostgres", config = config, nextStep = None)
 
     step.config should contain key "table"
     step.config("table") shouldBe "users"
@@ -55,10 +53,10 @@ class ExtractStepTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
 
   test("ExtractStep should support registerAs for DataFrame registration") {
     val config = Map(
-      "table" -> "users",
+      "table"      -> "users",
       "registerAs" -> "users_df",
     )
-    val step = ExtractStep(method = "fromPostgres", config = config, nextStep = None)
+    val step   = ExtractStep(method = "fromPostgres", config = config, nextStep = None)
 
     step.config should contain key "registerAs"
     step.config("registerAs") shouldBe "users_df"
@@ -66,24 +64,24 @@ class ExtractStepTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
 
   test("ExtractStep should handle missing registerAs") {
     val config = Map("table" -> "orders")
-    val step = ExtractStep(method = "fromPostgres", config = config, nextStep = None)
+    val step   = ExtractStep(method = "fromPostgres", config = config, nextStep = None)
 
     step.config.get("registerAs") shouldBe None
   }
 
   test("ExtractStep should support credentialPath for secure credentials") {
     val config = Map(
-      "table" -> "users",
+      "table"          -> "users",
       "credentialPath" -> "secret/data/postgres/production",
     )
-    val step = ExtractStep(method = "fromPostgres", config = config, nextStep = None)
+    val step   = ExtractStep(method = "fromPostgres", config = config, nextStep = None)
 
     step.config("credentialPath") shouldBe "secret/data/postgres/production"
   }
 
   test("ExtractStep should chain to next step") {
     val nextStep = ExtractStep(method = "fromMySQL", config = Map.empty, nextStep = None)
-    val step = ExtractStep(method = "fromPostgres", config = Map.empty, nextStep = Some(nextStep))
+    val step     = ExtractStep(method = "fromPostgres", config = Map.empty, nextStep = Some(nextStep))
 
     step.nextStep shouldBe defined
     step.nextStep.get shouldBe nextStep
@@ -91,10 +89,10 @@ class ExtractStepTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
 
   test("ExtractStep should support multiple source types") {
     val postgresStep = ExtractStep(method = "fromPostgres", config = Map.empty, nextStep = None)
-    val mysqlStep = ExtractStep(method = "fromMySQL", config = Map.empty, nextStep = None)
-    val kafkaStep = ExtractStep(method = "fromKafka", config = Map.empty, nextStep = None)
-    val s3Step = ExtractStep(method = "fromS3", config = Map.empty, nextStep = None)
-    val deltaStep = ExtractStep(method = "fromDeltaLake", config = Map.empty, nextStep = None)
+    val mysqlStep    = ExtractStep(method = "fromMySQL", config = Map.empty, nextStep = None)
+    val kafkaStep    = ExtractStep(method = "fromKafka", config = Map.empty, nextStep = None)
+    val s3Step       = ExtractStep(method = "fromS3", config = Map.empty, nextStep = None)
+    val deltaStep    = ExtractStep(method = "fromDeltaLake", config = Map.empty, nextStep = None)
 
     postgresStep.method shouldBe "fromPostgres"
     mysqlStep.method shouldBe "fromMySQL"
@@ -105,7 +103,7 @@ class ExtractStepTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
 
   test("ExtractStep should preserve config immutability") {
     val originalConfig = Map("table" -> "users")
-    val step = ExtractStep(method = "fromPostgres", config = originalConfig, nextStep = None)
+    val step           = ExtractStep(method = "fromPostgres", config = originalConfig, nextStep = None)
 
     step.config shouldBe originalConfig
     // Config should be immutable

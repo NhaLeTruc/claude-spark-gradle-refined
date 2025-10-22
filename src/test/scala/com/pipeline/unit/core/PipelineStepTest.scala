@@ -19,7 +19,7 @@ class PipelineStepTest extends AnyFunSuite with Matchers with BeforeAndAfterAll 
 
   @transient private var spark: SparkSession = _
 
-  override def beforeAll(): Unit = {
+  override def beforeAll(): Unit =
     spark = SparkSession
       .builder()
       .appName("PipelineStepTest")
@@ -27,13 +27,11 @@ class PipelineStepTest extends AnyFunSuite with Matchers with BeforeAndAfterAll 
       .config("spark.ui.enabled", "false")
       .config("spark.sql.shuffle.partitions", "2")
       .getOrCreate()
-  }
 
-  override def afterAll(): Unit = {
+  override def afterAll(): Unit =
     if (spark != null) {
       spark.stop()
     }
-  }
 
   test("PipelineStep should support chain of responsibility") {
     val sparkImplicits = spark.implicits
@@ -108,10 +106,10 @@ class PipelineStepTest extends AnyFunSuite with Matchers with BeforeAndAfterAll 
   }
 
   test("PipelineStep chain should support multiple transforms") {
-    val load = LoadStep(method = "toS3", config = Map.empty, nextStep = None)
+    val load       = LoadStep(method = "toS3", config = Map.empty, nextStep = None)
     val transform2 = TransformStep(method = "aggregate", config = Map.empty, nextStep = Some(load))
     val transform1 = TransformStep(method = "filter", config = Map.empty, nextStep = Some(transform2))
-    val extract = ExtractStep(method = "fromPostgres", config = Map.empty, nextStep = Some(transform1))
+    val extract    = ExtractStep(method = "fromPostgres", config = Map.empty, nextStep = Some(transform1))
 
     // Chain: extract -> transform1 -> transform2 -> load
     extract.nextStep shouldBe defined

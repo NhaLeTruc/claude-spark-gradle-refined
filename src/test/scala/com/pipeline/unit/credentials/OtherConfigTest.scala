@@ -20,7 +20,7 @@ class OtherConfigTest extends AnyFunSuite with Matchers {
       properties = Map(
         "bootstrap.servers" -> "localhost:9092",
         "security.protocol" -> "SASL_SSL",
-        "sasl.mechanism" -> "PLAIN",
+        "sasl.mechanism"    -> "PLAIN",
       ),
     )
 
@@ -44,7 +44,7 @@ class OtherConfigTest extends AnyFunSuite with Matchers {
   test("OtherConfig should retrieve specific property") {
     val config = OtherConfig(
       properties = Map(
-        "url" -> "https://delta-lake.example.com",
+        "url"   -> "https://delta-lake.example.com",
         "token" -> "secret-token",
       ),
     )
@@ -61,10 +61,10 @@ class OtherConfigTest extends AnyFunSuite with Matchers {
 
   test("OtherConfig should convert all values to strings") {
     val secretData = Map(
-      "port" -> 9092,
+      "port"    -> 9092,
       "enabled" -> true,
       "timeout" -> 30000L,
-      "host" -> "localhost",
+      "host"    -> "localhost",
     )
 
     val config = OtherConfig.fromVaultData(secretData)
@@ -79,7 +79,7 @@ class OtherConfigTest extends AnyFunSuite with Matchers {
     // In case Vault returns nested maps (though we flatten them)
     val secretData = Map(
       "kafka.bootstrap.servers" -> "localhost:9092",
-      "kafka.group.id" -> "consumer-group-1",
+      "kafka.group.id"          -> "consumer-group-1",
     )
 
     val config = OtherConfig.fromVaultData(secretData)
@@ -93,7 +93,7 @@ class OtherConfigTest extends AnyFunSuite with Matchers {
       properties = Map(
         "bootstrap.servers" -> "kafka:9092",
         "security.protocol" -> "SASL_SSL",
-        "sasl.mechanism" -> "SCRAM-SHA-256",
+        "sasl.mechanism"    -> "SCRAM-SHA-256",
         "sasl.jaas.config" -> "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"user\" password=\"pass\";",
       ),
     )
@@ -104,8 +104,8 @@ class OtherConfigTest extends AnyFunSuite with Matchers {
   test("OtherConfig should support DeltaLake configuration") {
     val deltaConfig = OtherConfig(
       properties = Map(
-        "path" -> "s3a://bucket/delta-table",
-        "mergeSchema" -> "true",
+        "path"            -> "s3a://bucket/delta-table",
+        "mergeSchema"     -> "true",
         "overwriteSchema" -> "false",
       ),
     )

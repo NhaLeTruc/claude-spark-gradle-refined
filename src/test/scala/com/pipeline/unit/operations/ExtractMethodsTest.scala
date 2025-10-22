@@ -21,7 +21,7 @@ class ExtractMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAl
 
   @transient private var spark: SparkSession = _
 
-  override def beforeAll(): Unit = {
+  override def beforeAll(): Unit =
     spark = SparkSession
       .builder()
       .appName("ExtractMethodsTest")
@@ -29,20 +29,18 @@ class ExtractMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAl
       .config("spark.ui.enabled", "false")
       .config("spark.sql.shuffle.partitions", "2")
       .getOrCreate()
-  }
 
-  override def afterAll(): Unit = {
+  override def afterAll(): Unit =
     if (spark != null) {
       spark.stop()
     }
-  }
 
   test("ExtractMethods should have fromPostgres method") {
     // This test just verifies the method exists and accepts correct parameters
     // Actual database connection testing is done in integration tests
 
     val config = Map(
-      "table" -> "users",
+      "table"          -> "users",
       "credentialType" -> "postgres",
     )
 
@@ -63,7 +61,7 @@ class ExtractMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAl
 
   test("ExtractMethods.fromPostgres should support query instead of table") {
     val config = Map(
-      "query" -> "SELECT * FROM users WHERE active = true",
+      "query"          -> "SELECT * FROM users WHERE active = true",
       "credentialType" -> "postgres",
     )
 
@@ -73,11 +71,11 @@ class ExtractMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAl
 
   test("ExtractMethods.fromPostgres should support partitioning") {
     val config = Map(
-      "table" -> "users",
+      "table"           -> "users",
       "partitionColumn" -> "id",
-      "lowerBound" -> 1,
-      "upperBound" -> 1000000,
-      "numPartitions" -> 10,
+      "lowerBound"      -> 1,
+      "upperBound"      -> 1000000,
+      "numPartitions"   -> 10,
     )
 
     config should contain key "partitionColumn"
@@ -87,7 +85,7 @@ class ExtractMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAl
   test("ExtractMethods should support fromS3 method") {
     val config = Map(
       "bucket" -> "data-lake",
-      "path" -> "/raw/users",
+      "path"   -> "/raw/users",
       "format" -> "parquet",
     )
 
@@ -106,9 +104,9 @@ class ExtractMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAl
 
   test("ExtractMethods.fromS3 should support schema inference") {
     val config = Map(
-      "bucket" -> "data-lake",
-      "path" -> "/data",
-      "format" -> "json",
+      "bucket"      -> "data-lake",
+      "path"        -> "/data",
+      "format"      -> "json",
       "inferSchema" -> "true",
     )
 

@@ -22,7 +22,7 @@ class PipelineExceptionTest extends AnyFunSuite with Matchers {
       stepIndex = Some(2),
       stepType = Some("transform"),
       method = Some("filterRows"),
-      config = Some(Map("condition" -> "age > 18"))
+      config = Some(Map("condition" -> "age > 18")),
     )
 
     val message = ex.getMessage
@@ -37,7 +37,7 @@ class PipelineExceptionTest extends AnyFunSuite with Matchers {
     val ex: PipelineException = new PipelineException(
       message = "Partial context error",
       pipelineName = Some("my-pipeline"),
-      stepIndex = Some(0)
+      stepIndex = Some(0),
     )
 
     val message = ex.getMessage
@@ -57,11 +57,13 @@ class PipelineExceptionTest extends AnyFunSuite with Matchers {
   test("PipelineException should sanitize password in config") {
     val ex = new PipelineException(
       message = "Error with credentials",
-      config = Some(Map(
-        "username" -> "user",
-        "password" -> "secret123",
-        "host" -> "localhost"
-      ))
+      config = Some(
+        Map(
+          "username" -> "user",
+          "password" -> "secret123",
+          "host"     -> "localhost",
+        ),
+      ),
     )
 
     val sanitized = ex.getSanitizedConfig
@@ -74,10 +76,12 @@ class PipelineExceptionTest extends AnyFunSuite with Matchers {
   test("PipelineException should sanitize secret in config") {
     val ex = new PipelineException(
       message = "Error",
-      config = Some(Map(
-        "api_secret" -> "abc123",
-        "url" -> "http://example.com"
-      ))
+      config = Some(
+        Map(
+          "api_secret" -> "abc123",
+          "url"        -> "http://example.com",
+        ),
+      ),
     )
 
     val sanitized = ex.getSanitizedConfig
@@ -88,10 +92,12 @@ class PipelineExceptionTest extends AnyFunSuite with Matchers {
   test("PipelineException should sanitize token in config") {
     val ex = new PipelineException(
       message = "Error",
-      config = Some(Map(
-        "access_token" -> "token123",
-        "endpoint" -> "/api"
-      ))
+      config = Some(
+        Map(
+          "access_token" -> "token123",
+          "endpoint"     -> "/api",
+        ),
+      ),
     )
 
     val sanitized = ex.getSanitizedConfig
@@ -102,11 +108,13 @@ class PipelineExceptionTest extends AnyFunSuite with Matchers {
   test("PipelineException should sanitize key but not keyspace") {
     val ex = new PipelineException(
       message = "Error",
-      config = Some(Map(
-        "api_key" -> "key123",
-        "keyspace" -> "production",  // Should NOT be redacted
-        "access_key" -> "access123"
-      ))
+      config = Some(
+        Map(
+          "api_key"    -> "key123",
+          "keyspace"   -> "production", // Should NOT be redacted
+          "access_key" -> "access123",
+        ),
+      ),
     )
 
     val sanitized = ex.getSanitizedConfig
@@ -118,7 +126,7 @@ class PipelineExceptionTest extends AnyFunSuite with Matchers {
   test("PipelineException should handle empty config") {
     val ex = new PipelineException(
       message = "Error",
-      config = Some(Map.empty)
+      config = Some(Map.empty),
     )
 
     val sanitized = ex.getSanitizedConfig
@@ -129,7 +137,7 @@ class PipelineExceptionTest extends AnyFunSuite with Matchers {
   test("PipelineException should handle None config") {
     val ex = new PipelineException(
       message = "Error",
-      config = None
+      config = None,
     )
 
     val sanitized = ex.getSanitizedConfig
@@ -139,7 +147,7 @@ class PipelineExceptionTest extends AnyFunSuite with Matchers {
   test("PipelineExecutionException should extend PipelineException") {
     val ex = new PipelineExecutionException(
       message = "Execution failed",
-      pipelineName = Some("test")
+      pipelineName = Some("test"),
     )
 
     ex shouldBe a[PipelineException]
@@ -148,9 +156,9 @@ class PipelineExceptionTest extends AnyFunSuite with Matchers {
 
   test("PipelineExecutionException should propagate cause") {
     val cause = new RuntimeException("Original error")
-    val ex = new PipelineExecutionException(
+    val ex    = new PipelineExecutionException(
       message = "Wrapped error",
-      cause = cause
+      cause = cause,
     )
 
     ex.getCause shouldBe cause
@@ -161,7 +169,7 @@ class PipelineExceptionTest extends AnyFunSuite with Matchers {
       referenceName = "missing_df",
       availableNames = Set("df1", "df2", "df3"),
       pipelineName = Some("test-pipeline"),
-      stepIndex = Some(1)
+      stepIndex = Some(1),
     )
 
     ex.referenceName shouldBe "missing_df"
@@ -176,7 +184,7 @@ class PipelineExceptionTest extends AnyFunSuite with Matchers {
   test("DataFrameResolutionException should show empty available names") {
     val ex = new DataFrameResolutionException(
       referenceName = "my_df",
-      availableNames = Set.empty
+      availableNames = Set.empty,
     )
 
     val message = ex.getMessage
@@ -187,7 +195,7 @@ class PipelineExceptionTest extends AnyFunSuite with Matchers {
   test("RetryableException should be recognizable") {
     val ex = new RetryableException(
       message = "Temporary failure",
-      cause = new java.net.ConnectException("Connection refused")
+      cause = new java.net.ConnectException("Connection refused"),
     )
 
     ex shouldBe a[PipelineException]
@@ -219,11 +227,11 @@ class PipelineExceptionTest extends AnyFunSuite with Matchers {
   }
 
   test("PipelineException.wrapException should create RetryableException for retryable errors") {
-    val cause = new java.net.ConnectException("Connection refused")
+    val cause   = new java.net.ConnectException("Connection refused")
     val wrapped = PipelineException.wrapException(
       cause,
       pipelineName = Some("test"),
-      stepIndex = Some(0)
+      stepIndex = Some(0),
     )
 
     wrapped shouldBe a[RetryableException]
@@ -231,10 +239,10 @@ class PipelineExceptionTest extends AnyFunSuite with Matchers {
   }
 
   test("PipelineException.wrapException should create PipelineExecutionException for non-retryable errors") {
-    val cause = new IllegalArgumentException("Bad config")
+    val cause   = new IllegalArgumentException("Bad config")
     val wrapped = PipelineException.wrapException(
       cause,
-      pipelineName = Some("test")
+      pipelineName = Some("test"),
     )
 
     wrapped shouldBe a[PipelineExecutionException]
@@ -247,7 +255,7 @@ class PipelineExceptionTest extends AnyFunSuite with Matchers {
       failureCount = 5,
       sampleRecords = Seq("record1", "record2"),
       validationRule = Some("Schema must match expected structure"),
-      pipelineName = Some("validator-pipeline")
+      pipelineName = Some("validator-pipeline"),
     )
 
     ex.validationType shouldBe "schema"
@@ -260,7 +268,7 @@ class PipelineExceptionTest extends AnyFunSuite with Matchers {
     val ex = new ValidationException(
       validationType = "null_check",
       failureCount = 100,
-      sampleRecords = Seq.empty
+      sampleRecords = Seq.empty,
     )
 
     ex.failureCount shouldBe 100

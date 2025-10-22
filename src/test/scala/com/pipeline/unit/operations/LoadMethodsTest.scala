@@ -21,7 +21,7 @@ class LoadMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
 
   @transient private var spark: SparkSession = _
 
-  override def beforeAll(): Unit = {
+  override def beforeAll(): Unit =
     spark = SparkSession
       .builder()
       .appName("LoadMethodsTest")
@@ -29,18 +29,16 @@ class LoadMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
       .config("spark.ui.enabled", "false")
       .config("spark.sql.shuffle.partitions", "2")
       .getOrCreate()
-  }
 
-  override def afterAll(): Unit = {
+  override def afterAll(): Unit =
     if (spark != null) {
       spark.stop()
     }
-  }
 
   test("LoadMethods should have toS3 method") {
     val config = Map(
       "bucket" -> "data-lake",
-      "path" -> "/processed/users",
+      "path"   -> "/processed/users",
       "format" -> "parquet",
     )
 
@@ -52,7 +50,7 @@ class LoadMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
   test("LoadMethods.toS3 should require bucket and path") {
     val config = Map(
       "bucket" -> "data-lake",
-      "path" -> "/users",
+      "path"   -> "/users",
     )
 
     config should contain key "bucket"
@@ -82,9 +80,9 @@ class LoadMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
 
   test("LoadMethods.toS3 should support partitioning") {
     val config = Map(
-      "bucket" -> "data-lake",
-      "path" -> "/users",
-      "format" -> "parquet",
+      "bucket"      -> "data-lake",
+      "path"        -> "/users",
+      "format"      -> "parquet",
       "partitionBy" -> List("year", "month", "day"),
     )
 
@@ -94,9 +92,9 @@ class LoadMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
 
   test("LoadMethods.toS3 should support compression") {
     val config = Map(
-      "bucket" -> "data-lake",
-      "path" -> "/users",
-      "format" -> "parquet",
+      "bucket"      -> "data-lake",
+      "path"        -> "/users",
+      "format"      -> "parquet",
       "compression" -> "snappy",
     )
 
@@ -106,7 +104,7 @@ class LoadMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
   test("LoadMethods should have toPostgres method") {
     val config = Map(
       "table" -> "users",
-      "mode" -> "append",
+      "mode"  -> "append",
     )
 
     config should contain key "table"
@@ -142,7 +140,7 @@ class LoadMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
   test("LoadMethods.toS3 should support s3a protocol") {
     val config = Map(
       "bucket" -> "data-lake",
-      "path" -> "/users",
+      "path"   -> "/users",
       "format" -> "parquet",
     )
 
