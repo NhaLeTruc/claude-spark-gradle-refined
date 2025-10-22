@@ -129,7 +129,7 @@ class SecureCredentialManager(
    * @return true if allowed
    * @throws CredentialException if not allowed
    */
-  def validateAccess(credentialSource: String, credentialPath: String): Boolean = {
+  def validateAccess(credentialSource: String, credentialPath: String): Boolean =
     credentialSource.toLowerCase match {
       case "vault" =>
         // Vault access always allowed
@@ -157,7 +157,6 @@ class SecureCredentialManager(
           credentialPath = Some(credentialPath),
         )
     }
-  }
 
   /**
    * Gets the current security policy.

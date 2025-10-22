@@ -26,10 +26,10 @@ object JsonFileExporter {
       metrics: PipelineMetrics,
       outputPath: String,
       append: Boolean = false,
-  ): Unit = {
+  ): Unit =
     Try {
       val jsonString = metrics.toJson
-      val file = new File(outputPath)
+      val file       = new File(outputPath)
 
       // Create parent directories if needed
       Option(file.getParentFile).foreach { parent =>
@@ -55,18 +55,15 @@ object JsonFileExporter {
           writer.write(jsonString)
           writer.write("\n")
           logger.info(s"Exported metrics to JSON file: $outputPath")
-        } finally {
-          writer.close()
-        }
+        } finally writer.close()
       }
     } match {
-      case Success(_) =>
+      case Success(_)  =>
         logger.debug(s"Successfully exported metrics for pipeline: ${metrics.pipelineName}")
       case Failure(ex) =>
         logger.error(s"Failed to export metrics to JSON file: $outputPath", ex)
         throw ex
     }
-  }
 
   /**
    * Exports metrics to a timestamped JSON file.
@@ -83,11 +80,11 @@ object JsonFileExporter {
       baseDir: String,
       pipelineName: String,
   ): String = {
-    val timestamp = new java.text.SimpleDateFormat("yyyy-MM-dd-HHmmss-SSS")
+    val timestamp     = new java.text.SimpleDateFormat("yyyy-MM-dd-HHmmss-SSS")
       .format(new java.util.Date(metrics.startTime))
     val sanitizedName = pipelineName.replaceAll("[^a-zA-Z0-9-_]", "_")
-    val filename = s"metrics-$sanitizedName-$timestamp.json"
-    val outputPath = s"$baseDir/$filename"
+    val filename      = s"metrics-$sanitizedName-$timestamp.json"
+    val outputPath    = s"$baseDir/$filename"
 
     export(metrics, outputPath, append = false)
     outputPath
@@ -102,9 +99,8 @@ object JsonFileExporter {
    * @param metrics    The pipeline metrics to export
    * @param outputPath Path to the JSONL file
    */
-  def exportToJsonLines(metrics: PipelineMetrics, outputPath: String): Unit = {
+  def exportToJsonLines(metrics: PipelineMetrics, outputPath: String): Unit =
     export(metrics, outputPath, append = true)
-  }
 
   /**
    * Reads all metrics from a JSON Lines file.
@@ -112,31 +108,27 @@ object JsonFileExporter {
    * @param inputPath Path to the JSONL file
    * @return List of metrics maps
    */
-  def readJsonLines(inputPath: String): List[Map[String, Any]] = {
+  def readJsonLines(inputPath: String): List[Map[String, Any]] =
     Try {
       import org.json4s._
       import org.json4s.jackson.JsonMethods._
       implicit val formats: Formats = DefaultFormats
 
       val source = scala.io.Source.fromFile(inputPath)
-      try {
-        source
-          .getLines()
-          .filter(_.trim.nonEmpty)
-          .map { line =>
-            parse(line).extract[Map[String, Any]]
-          }
-          .toList
-      } finally {
-        source.close()
-      }
+      try source
+        .getLines()
+        .filter(_.trim.nonEmpty)
+        .map { line =>
+          parse(line).extract[Map[String, Any]]
+        }
+        .toList
+      finally source.close()
     } match {
       case Success(metrics) =>
         logger.info(s"Read ${metrics.size} metrics from JSONL file: $inputPath")
         metrics
-      case Failure(ex) =>
+      case Failure(ex)      =>
         logger.error(s"Failed to read metrics from JSONL file: $inputPath", ex)
         throw ex
     }
-  }
 }

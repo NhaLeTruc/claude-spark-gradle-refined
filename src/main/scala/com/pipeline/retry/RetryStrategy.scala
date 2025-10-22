@@ -84,11 +84,8 @@ object RetryStrategy {
   ): Try[T] = {
     org.slf4j.MDC.put("pipelineId", pipelineId)
 
-    try {
-      executeWithRetry(() => Try(execution), maxAttempts, delayMillis)
-    } finally {
-      org.slf4j.MDC.remove("pipelineId")
-    }
+    try executeWithRetry(() => Try(execution), maxAttempts, delayMillis)
+    finally org.slf4j.MDC.remove("pipelineId")
   }
 
   /**
@@ -155,13 +152,12 @@ object RetryStrategy {
    * @param ex The exception to check
    * @return true if the exception is retryable
    */
-  private def shouldRetry(ex: Throwable): Boolean = {
+  private def shouldRetry(ex: Throwable): Boolean =
     ex match {
       case _: RetryableException => true
       case pe: PipelineException => PipelineException.isRetryable(pe)
-      case _ => PipelineException.isRetryable(ex)
+      case _                     => PipelineException.isRetryable(ex)
     }
-  }
 
   /**
    * Wraps a pipeline execution function with smart retry logic.
@@ -183,10 +179,7 @@ object RetryStrategy {
   ): Try[T] = {
     org.slf4j.MDC.put("pipelineId", pipelineId)
 
-    try {
-      executeWithSmartRetry(() => Try(execution), maxAttempts, delayMillis)
-    } finally {
-      org.slf4j.MDC.remove("pipelineId")
-    }
+    try executeWithSmartRetry(() => Try(execution), maxAttempts, delayMillis)
+    finally org.slf4j.MDC.remove("pipelineId")
   }
 }

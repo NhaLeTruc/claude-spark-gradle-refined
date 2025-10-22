@@ -55,7 +55,7 @@ object LogExporter {
    *
    * @param metrics The pipeline metrics to export
    */
-  def exportWithMDC(metrics: PipelineMetrics): Unit = {
+  def exportWithMDC(metrics: PipelineMetrics): Unit =
     try {
       // Set MDC context
       org.slf4j.MDC.put("pipelineName", metrics.pipelineName)
@@ -80,7 +80,6 @@ object LogExporter {
       org.slf4j.MDC.remove("totalBytesRead")
       org.slf4j.MDC.remove("totalBytesWritten")
     }
-  }
 
   /**
    * Formats pipeline summary for logging.
@@ -120,7 +119,7 @@ object LogExporter {
   /**
    * Formats duration in human-readable format.
    */
-  private def formatDuration(ms: Long): String = {
+  private def formatDuration(ms: Long): String =
     if (ms < 1000) {
       s"${ms}ms"
     } else if (ms < 60000) {
@@ -128,14 +127,13 @@ object LogExporter {
     } else {
       val minutes = ms / 60000
       val seconds = (ms % 60000) / 1000.0
-      f"${minutes}m ${seconds}%.2fs"
+      f"${minutes}m $seconds%.2fs"
     }
-  }
 
   /**
    * Formats bytes in human-readable format.
    */
-  private def formatBytes(bytes: Long): String = {
+  private def formatBytes(bytes: Long): String =
     if (bytes < 1024) {
       s"${bytes}B"
     } else if (bytes < 1024 * 1024) {
@@ -145,7 +143,6 @@ object LogExporter {
     } else {
       f"${bytes / (1024.0 * 1024.0 * 1024.0)}%.2fGB"
     }
-  }
 
   /**
    * Exports metrics in JSON format to logs.

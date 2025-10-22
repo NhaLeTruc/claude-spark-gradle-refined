@@ -43,7 +43,7 @@ object SecurityPolicyExample {
     )
 
     val manager = SecureCredentialManager.permissive(vaultClient)
-    val policy = manager.getPolicy
+    val policy  = manager.getPolicy
 
     logger.info(s"Vault-only mode: ${policy.vaultOnlyMode}")
     logger.info(s"Allow plain text: ${policy.allowPlainTextCredentials}")
@@ -54,8 +54,8 @@ object SecurityPolicyExample {
       val credentials = manager.fromPlainText(
         credentialType = "postgres",
         data = Map(
-          "host" -> "localhost",
-          "port" -> "5432",
+          "host"     -> "localhost",
+          "port"     -> "5432",
           "database" -> "testdb",
           "username" -> "user",
           "password" -> "password",
@@ -107,7 +107,7 @@ object SecurityPolicyExample {
     )
 
     val manager = SecureCredentialManager.strict(vaultClient)
-    val policy = manager.getPolicy
+    val policy  = manager.getPolicy
 
     logger.info(s"Vault-only mode: ${policy.vaultOnlyMode}")
     logger.info(s"Allow plain text: ${policy.allowPlainTextCredentials}")
@@ -129,7 +129,7 @@ object SecurityPolicyExample {
       case ex: com.pipeline.exceptions.CredentialException =>
         logger.info("✓ Plain text credentials correctly rejected in strict mode")
         logger.info(s"  Error: ${ex.getMessage}")
-      case ex: Exception =>
+      case ex: Exception                                   =>
         logger.error("✗ Unexpected error", ex)
     }
 
@@ -280,24 +280,24 @@ object SecurityPolicyExample {
     logger.info("-" * 80)
 
     val vaultClient = VaultClient.fromConfig()
-    val manager = SecureCredentialManager.strict(vaultClient)
+    val manager     = SecureCredentialManager.strict(vaultClient)
 
     logger.info("In pipeline configuration, reference Vault paths:")
     logger.info("""
-      |{
-      |  "name": "secure-pipeline",
-      |  "mode": "batch",
-      |  "steps": [
-      |    {
-      |      "type": "extract",
-      |      "method": "fromPostgres",
-      |      "config": {
-      |        "credentialPath": "secret/data/postgres"
-      |      }
-      |    }
-      |  ]
-      |}
-      |""".stripMargin)
+                  |{
+                  |  "name": "secure-pipeline",
+                  |  "mode": "batch",
+                  |  "steps": [
+                  |    {
+                  |      "type": "extract",
+                  |      "method": "fromPostgres",
+                  |      "config": {
+                  |        "credentialPath": "secret/data/postgres"
+                  |      }
+                  |    }
+                  |  ]
+                  |}
+                  |""".stripMargin)
 
     logger.info("\nAll credential access is:")
     logger.info("  ✓ Retrieved from Vault only")

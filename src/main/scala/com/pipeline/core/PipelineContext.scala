@@ -55,9 +55,8 @@ case class PipelineContext(
    * @param name Name of the DataFrame to retrieve
    * @return Option containing the DataFrame if found
    */
-  def get(name: String): Option[DataFrame] = {
+  def get(name: String): Option[DataFrame] =
     dataFrames.get(name)
-  }
 
   /**
    * Updates the primary data flow.
@@ -67,9 +66,8 @@ case class PipelineContext(
    * @param data New primary data (Avro or DataFrame)
    * @return Updated context with new primary data
    */
-  def updatePrimary(data: Either[GenericRecord, DataFrame]): PipelineContext = {
+  def updatePrimary(data: Either[GenericRecord, DataFrame]): PipelineContext =
     this.copy(primary = data)
-  }
 
   /**
    * Gets the primary DataFrame.
@@ -78,12 +76,11 @@ case class PipelineContext(
    *
    * @return Primary DataFrame
    */
-  def getPrimaryDataFrame: DataFrame = {
+  def getPrimaryDataFrame: DataFrame =
     primary match {
       case Right(df) => df
       case Left(_)   => throw new IllegalStateException("Primary data is Avro GenericRecord, not DataFrame")
     }
-  }
 
   /**
    * Checks if primary data is a DataFrame.
@@ -139,9 +136,8 @@ case class PipelineContext(
    * @param name Name of the query to retrieve
    * @return Option containing the StreamingQuery if found
    */
-  def getStreamingQuery(name: String): Option[StreamingQuery] = {
+  def getStreamingQuery(name: String): Option[StreamingQuery] =
     streamingQueries.get(name)
-  }
 
   /**
    * Gets all registered streaming query names.
@@ -155,7 +151,7 @@ case class PipelineContext(
    *
    * Called during pipeline shutdown or cancellation.
    */
-  def stopAllStreams(): Unit = {
+  def stopAllStreams(): Unit =
     if (streamingQueries.nonEmpty) {
       logger.info(s"Stopping ${streamingQueries.size} streaming queries")
       streamingQueries.values.foreach { query =>
@@ -166,7 +162,6 @@ case class PipelineContext(
       }
       streamingQueries.clear()
     }
-  }
 
   /**
    * Awaits termination of all streaming queries.
@@ -183,7 +178,7 @@ case class PipelineContext(
       case Some(ms) =>
         logger.info(s"Awaiting termination for ${ms}ms")
         streamingQueries.values.foreach(_.awaitTermination(ms))
-      case None =>
+      case None     =>
         logger.info("Awaiting termination (indefinite)")
         streamingQueries.values.foreach(_.awaitTermination())
     }
@@ -194,9 +189,8 @@ case class PipelineContext(
    *
    * @return True if at least one query is active
    */
-  def hasActiveStreams: Boolean = {
+  def hasActiveStreams: Boolean =
     streamingQueries.values.exists(_.isActive)
-  }
 
   /**
    * Caches a DataFrame with the specified storage level.
@@ -205,18 +199,17 @@ case class PipelineContext(
    * @param storageLevel Storage level (default: MEMORY_AND_DISK)
    * @return Updated context
    */
-  def cache(name: String, storageLevel: StorageLevel = StorageLevel.MEMORY_AND_DISK): PipelineContext = {
+  def cache(name: String, storageLevel: StorageLevel = StorageLevel.MEMORY_AND_DISK): PipelineContext =
     dataFrames.get(name) match {
       case Some(df) =>
         logger.info(s"Caching DataFrame '$name' with storage level: $storageLevel")
         df.persist(storageLevel)
         cachedDataFrames.add(name)
         this
-      case None =>
+      case None     =>
         logger.warn(s"Cannot cache DataFrame '$name' - not found in registry")
         this
     }
-  }
 
   /**
    * Caches the primary DataFrame with the specified storage level.
@@ -224,18 +217,17 @@ case class PipelineContext(
    * @param storageLevel Storage level (default: MEMORY_AND_DISK)
    * @return Updated context
    */
-  def cachePrimary(storageLevel: StorageLevel = StorageLevel.MEMORY_AND_DISK): PipelineContext = {
+  def cachePrimary(storageLevel: StorageLevel = StorageLevel.MEMORY_AND_DISK): PipelineContext =
     primary match {
       case Right(df) =>
         logger.info(s"Caching primary DataFrame with storage level: $storageLevel")
         df.persist(storageLevel)
         cachedDataFrames.add("__primary__")
         this
-      case Left(_) =>
+      case Left(_)   =>
         logger.warn("Cannot cache primary - it's an Avro GenericRecord, not a DataFrame")
         this
     }
-  }
 
   /**
    * Uncaches a DataFrame and removes it from memory.
@@ -243,18 +235,17 @@ case class PipelineContext(
    * @param name Name of the DataFrame to uncache
    * @return Updated context
    */
-  def uncache(name: String): PipelineContext = {
+  def uncache(name: String): PipelineContext =
     dataFrames.get(name) match {
       case Some(df) =>
         logger.info(s"Uncaching DataFrame '$name'")
         df.unpersist(blocking = false)
         cachedDataFrames.remove(name)
         this
-      case None =>
+      case None     =>
         logger.warn(s"Cannot uncache DataFrame '$name' - not found in registry")
         this
     }
-  }
 
   /**
    * Uncaches all cached DataFrames.
@@ -270,7 +261,7 @@ case class PipelineContext(
         if (name == "__primary__") {
           primary match {
             case Right(df) => df.unpersist(blocking)
-            case Left(_) => // Skip Avro
+            case Left(_)   => // Skip Avro
           }
         } else {
           dataFrames.get(name).foreach(_.unpersist(blocking))
@@ -288,18 +279,16 @@ case class PipelineContext(
    * @param name Name of the DataFrame
    * @return True if cached
    */
-  def isCached(name: String): Boolean = {
+  def isCached(name: String): Boolean =
     cachedDataFrames.contains(name)
-  }
 
   /**
    * Gets all cached DataFrame names.
    *
    * @return Set of cached DataFrame names
    */
-  def cachedNames: Set[String] = {
+  def cachedNames: Set[String] =
     cachedDataFrames.toSet
-  }
 }
 
 /**
@@ -313,9 +302,8 @@ object PipelineContext {
    * @param df Primary DataFrame
    * @return New PipelineContext
    */
-  def fromDataFrame(df: DataFrame): PipelineContext = {
+  def fromDataFrame(df: DataFrame): PipelineContext =
     PipelineContext(Right(df))
-  }
 
   /**
    * Creates a context from an Avro GenericRecord.
@@ -323,7 +311,6 @@ object PipelineContext {
    * @param record Primary Avro record
    * @return New PipelineContext
    */
-  def fromAvro(record: GenericRecord): PipelineContext = {
+  def fromAvro(record: GenericRecord): PipelineContext =
     PipelineContext(Left(record))
-  }
 }

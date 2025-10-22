@@ -66,9 +66,8 @@ object PipelineRunner {
         val result = pipeline.execute(spark)
 
         // Remove shutdown hook if completed normally
-        try {
-          Runtime.getRuntime.removeShutdownHook(shutdownHook)
-        } catch {
+        try Runtime.getRuntime.removeShutdownHook(shutdownHook)
+        catch {
           case _: IllegalStateException => // Already shutting down
         }
 
@@ -87,12 +86,11 @@ object PipelineRunner {
           case _ => println("Something unexpected happened")
         }
 
-      } finally {
-        // Stop SparkSession
-        if (!isClusterMode) {
-          logger.info("Stopping SparkSession")
-          spark.stop()
-        }
+      } finally
+      // Stop SparkSession
+      if (!isClusterMode) {
+        logger.info("Stopping SparkSession")
+        spark.stop()
       }
 
     } catch {
@@ -111,7 +109,8 @@ object PipelineRunner {
   private def createSparkSession(mode: String): SparkSession = {
     logger.info(s"Creating SparkSession for mode: $mode")
 
-    val builder = SparkSession.builder()
+    val builder = SparkSession
+      .builder()
       .appName("Pipeline Orchestration Application")
 
     // Configure based on cluster vs local mode
@@ -144,42 +143,40 @@ object PipelineRunner {
    *
    * @return True if running in cluster, false if local
    */
-  private def isClusterMode: Boolean = {
+  private def isClusterMode: Boolean =
     sys.env.contains("SPARK_MASTER") ||
-    (sys.props.contains("spark.master") &&
-      !sys.props("spark.master").startsWith("local"))
-  }
+      (sys.props.contains("spark.master") &&
+        !sys.props("spark.master").startsWith("local"))
 
   /**
    * Prints usage information.
    */
-  private def printUsage(): Unit = {
+  private def printUsage(): Unit =
     println("""
-      |Pipeline Orchestration Application
-      |
-      |Usage:
-      |  java -jar pipeline-app.jar <config-file>
-      |  spark-submit --class com.pipeline.cli.PipelineRunner pipeline-app-all.jar <config-file>
-      |
-      |Arguments:
-      |  config-file    Path to pipeline JSON configuration file
-      |
-      |Environment Variables:
-      |  VAULT_ADDR     HashiCorp Vault address (e.g., http://localhost:8200)
-      |  VAULT_TOKEN    Vault authentication token
-      |  VAULT_NAMESPACE (Optional) Vault namespace
-      |
-      |Examples:
-      |  # Local execution
-      |  java -jar build/libs/pipeline-app-1.0-SNAPSHOT.jar config/examples/simple-etl.json
-      |
-      |  # Spark cluster execution
-      |  spark-submit --class com.pipeline.cli.PipelineRunner \
-      |    --master spark://master:7077 \
-      |    build/libs/pipeline-app-1.0-SNAPSHOT-all.jar \
-      |    config/examples/simple-etl.json
-      |
-      |For more information, see README.md
-      |""".stripMargin)
-  }
+              |Pipeline Orchestration Application
+              |
+              |Usage:
+              |  java -jar pipeline-app.jar <config-file>
+              |  spark-submit --class com.pipeline.cli.PipelineRunner pipeline-app-all.jar <config-file>
+              |
+              |Arguments:
+              |  config-file    Path to pipeline JSON configuration file
+              |
+              |Environment Variables:
+              |  VAULT_ADDR     HashiCorp Vault address (e.g., http://localhost:8200)
+              |  VAULT_TOKEN    Vault authentication token
+              |  VAULT_NAMESPACE (Optional) Vault namespace
+              |
+              |Examples:
+              |  # Local execution
+              |  java -jar build/libs/pipeline-app-1.0-SNAPSHOT.jar config/examples/simple-etl.json
+              |
+              |  # Spark cluster execution
+              |  spark-submit --class com.pipeline.cli.PipelineRunner \
+              |    --master spark://master:7077 \
+              |    build/libs/pipeline-app-1.0-SNAPSHOT-all.jar \
+              |    config/examples/simple-etl.json
+              |
+              |For more information, see README.md
+              |""".stripMargin)
 }

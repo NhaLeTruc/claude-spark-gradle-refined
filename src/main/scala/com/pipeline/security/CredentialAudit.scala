@@ -15,7 +15,7 @@ case class CredentialAuditEntry(
     credentialPath: String,
     credentialType: String,
     accessType: String, // "read", "write", "delete"
-    source: String, // "vault", "plaintext", "environment"
+    source: String,     // "vault", "plaintext", "environment"
     success: Boolean,
     errorMessage: Option[String] = None,
     userId: Option[String] = None,
@@ -25,21 +25,20 @@ case class CredentialAuditEntry(
   /**
    * Converts audit entry to map for logging.
    */
-  def toMap: Map[String, Any] = {
+  def toMap: Map[String, Any] =
     Map(
-      "timestamp" -> timestamp,
-      "timestampIso" -> Instant.ofEpochMilli(timestamp).toString,
-      "pipelineName" -> pipelineName.getOrElse("unknown"),
+      "timestamp"      -> timestamp,
+      "timestampIso"   -> Instant.ofEpochMilli(timestamp).toString,
+      "pipelineName"   -> pipelineName.getOrElse("unknown"),
       "credentialPath" -> credentialPath,
       "credentialType" -> credentialType,
-      "accessType" -> accessType,
-      "source" -> source,
-      "success" -> success,
-      "errorMessage" -> errorMessage.getOrElse(""),
-      "userId" -> userId.getOrElse("unknown"),
-      "ipAddress" -> ipAddress.getOrElse("unknown"),
+      "accessType"     -> accessType,
+      "source"         -> source,
+      "success"        -> success,
+      "errorMessage"   -> errorMessage.getOrElse(""),
+      "userId"         -> userId.getOrElse("unknown"),
+      "ipAddress"      -> ipAddress.getOrElse("unknown"),
     )
-  }
 
   /**
    * Converts audit entry to JSON string.
@@ -99,9 +98,7 @@ object CredentialAudit {
             s"error=${entry.errorMessage.getOrElse("unknown")}",
         )
       }
-    } finally {
-      MDC.clear()
-    }
+    } finally MDC.clear()
   }
 
   /**
@@ -111,7 +108,7 @@ object CredentialAudit {
       path: String,
       credentialType: String,
       pipelineName: Option[String] = None,
-  ): Unit = {
+  ): Unit =
     log(
       CredentialAuditEntry(
         pipelineName = pipelineName,
@@ -122,7 +119,6 @@ object CredentialAudit {
         success = true,
       ),
     )
-  }
 
   /**
    * Logs failed credential read from Vault.
@@ -132,7 +128,7 @@ object CredentialAudit {
       credentialType: String,
       error: String,
       pipelineName: Option[String] = None,
-  ): Unit = {
+  ): Unit =
     log(
       CredentialAuditEntry(
         pipelineName = pipelineName,
@@ -144,7 +140,6 @@ object CredentialAudit {
         errorMessage = Some(error),
       ),
     )
-  }
 
   /**
    * Logs plain text credential usage.
@@ -152,7 +147,7 @@ object CredentialAudit {
   def logPlainTextAccess(
       credentialType: String,
       pipelineName: Option[String] = None,
-  ): Unit = {
+  ): Unit =
     log(
       CredentialAuditEntry(
         pipelineName = pipelineName,
@@ -163,7 +158,6 @@ object CredentialAudit {
         success = true,
       ),
     )
-  }
 
   /**
    * Logs environment variable credential usage.
@@ -172,7 +166,7 @@ object CredentialAudit {
       envVar: String,
       credentialType: String,
       pipelineName: Option[String] = None,
-  ): Unit = {
+  ): Unit =
     log(
       CredentialAuditEntry(
         pipelineName = pipelineName,
@@ -183,7 +177,6 @@ object CredentialAudit {
         success = true,
       ),
     )
-  }
 
   /**
    * Logs security policy violation.
@@ -193,7 +186,7 @@ object CredentialAudit {
       credentialPath: String,
       credentialType: String,
       pipelineName: Option[String] = None,
-  ): Unit = {
+  ): Unit =
     log(
       CredentialAuditEntry(
         pipelineName = pipelineName,
@@ -205,27 +198,24 @@ object CredentialAudit {
         errorMessage = Some(violation),
       ),
     )
-  }
 
   /**
    * Gets all audit entries (for testing).
    *
    * @return List of audit entries
    */
-  def getAuditLog: List[CredentialAuditEntry] = {
+  def getAuditLog: List[CredentialAuditEntry] =
     auditLog.synchronized {
       auditLog.toList
     }
-  }
 
   /**
    * Clears the audit log (for testing).
    */
-  def clearAuditLog(): Unit = {
+  def clearAuditLog(): Unit =
     auditLog.synchronized {
       auditLog.clear()
     }
-  }
 
   /**
    * Exports audit log to JSON file.
@@ -234,15 +224,13 @@ object CredentialAudit {
    */
   def exportToJson(outputPath: String): Unit = {
     val entries = getAuditLog
-    val json = entries.map(_.toJson).mkString("[\n  ", ",\n  ", "\n]")
+    val json    = entries.map(_.toJson).mkString("[\n  ", ",\n  ", "\n]")
 
     val writer = new java.io.PrintWriter(new java.io.File(outputPath))
     try {
       writer.write(json)
       logger.info(s"Exported ${entries.size} audit entries to: $outputPath")
-    } finally {
-      writer.close()
-    }
+    } finally writer.close()
   }
 
   /**
@@ -255,9 +243,9 @@ object CredentialAudit {
     import java.nio.file.{Files, Paths, StandardOpenOption}
 
     val entries = getAuditLog
-    val lines = entries.map(_.toJson).mkString("", "\n", "\n")
+    val lines   = entries.map(_.toJson).mkString("", "\n", "\n")
 
-    val path = Paths.get(outputPath)
+    val path    = Paths.get(outputPath)
     val options = if (append) {
       Seq(StandardOpenOption.CREATE, StandardOpenOption.APPEND)
     } else {

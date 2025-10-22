@@ -30,7 +30,7 @@ object LoadMethods {
     require(config.contains("table"), "'table' is required")
 
     val jdbcConfig = resolveJdbcCredentials(config, "postgres")
-    val saveMode = parseSaveMode(config.getOrElse("mode", "append").toString)
+    val saveMode   = parseSaveMode(config.getOrElse("mode", "append").toString)
 
     val writer = df.write
       .format("jdbc")
@@ -67,7 +67,7 @@ object LoadMethods {
     require(config.contains("table"), "'table' is required")
 
     val jdbcConfig = resolveJdbcCredentials(config, "mysql")
-    val saveMode = parseSaveMode(config.getOrElse("mode", "append").toString)
+    val saveMode   = parseSaveMode(config.getOrElse("mode", "append").toString)
 
     val writer = df.write
       .format("jdbc")
@@ -100,14 +100,19 @@ object LoadMethods {
    * @param isStreaming Whether to use streaming write
    * @return Option[StreamingQuery] if streaming, None if batch
    */
-  def toKafka(df: DataFrame, config: Map[String, Any], spark: SparkSession, isStreaming: Boolean = false): Option[org.apache.spark.sql.streaming.StreamingQuery] = {
+  def toKafka(
+      df: DataFrame,
+      config: Map[String, Any],
+      spark: SparkSession,
+      isStreaming: Boolean = false,
+  ): Option[org.apache.spark.sql.streaming.StreamingQuery] = {
     val mode = if (isStreaming) "STREAMING" else "BATCH"
     logger.info(s"Loading to Kafka in $mode mode")
 
     require(config.contains("topic"), "'topic' is required")
 
-    val kafkaConfig = resolveKafkaCredentials(config)
-    val topic = config("topic").toString
+    val kafkaConfig      = resolveKafkaCredentials(config)
+    val topic            = config("topic").toString
     val bootstrapServers = kafkaConfig.getOrElse("bootstrap.servers", "localhost:9092").toString
 
     // DataFrame must have 'key' and 'value' columns for Kafka
@@ -126,11 +131,11 @@ object LoadMethods {
       // Streaming write
       logger.info(s"Writing stream to Kafka topic: $topic")
 
-      val checkpointLocation = config.getOrElse("checkpointLocation",
-        s"/tmp/checkpoints/kafka_${java.util.UUID.randomUUID().toString}"
-      ).toString
+      val checkpointLocation = config
+        .getOrElse("checkpointLocation", s"/tmp/checkpoints/kafka_${java.util.UUID.randomUUID().toString}")
+        .toString
 
-      val outputMode = config.getOrElse("outputMode", "append").toString
+      val outputMode      = config.getOrElse("outputMode", "append").toString
       val triggerInterval = config.getOrElse("trigger", "5 seconds").toString
 
       var streamWriter = preparedDF.writeStream
@@ -195,19 +200,20 @@ object LoadMethods {
     iamConfig.sessionToken.foreach { token =>
       spark.sparkContext.hadoopConfiguration.set("fs.s3a.session.token", token)
     }
-    spark.sparkContext.hadoopConfiguration.set("fs.s3a.aws.credentials.provider", "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider")
+    spark.sparkContext.hadoopConfiguration
+      .set("fs.s3a.aws.credentials.provider", "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider")
 
-    val format = config.getOrElse("format", "parquet").toString
+    val format   = config.getOrElse("format", "parquet").toString
     val saveMode = parseSaveMode(config.getOrElse("mode", "append").toString)
-    val s3Path = s"s3a://${config("bucket")}${config("path")}"
+    val s3Path   = s"s3a://${config("bucket")}${config("path")}"
 
     val writer = df.write.format(format).mode(saveMode)
 
     // Add partitioning if specified
     val finalWriter = config.get("partitionBy") match {
       case Some(columns: List[_]) => writer.partitionBy(columns.map(_.toString): _*)
-      case Some(column: String) => writer.partitionBy(column)
-      case _ => writer
+      case Some(column: String)   => writer.partitionBy(column)
+      case _                      => writer
     }
 
     finalWriter.save(s3Path)
@@ -223,7 +229,12 @@ object LoadMethods {
    * @param isStreaming Whether to use streaming write
    * @return Option[StreamingQuery] if streaming, None if batch
    */
-  def toDeltaLake(df: DataFrame, config: Map[String, Any], spark: SparkSession, isStreaming: Boolean = false): Option[org.apache.spark.sql.streaming.StreamingQuery] = {
+  def toDeltaLake(
+      df: DataFrame,
+      config: Map[String, Any],
+      spark: SparkSession,
+      isStreaming: Boolean = false,
+  ): Option[org.apache.spark.sql.streaming.StreamingQuery] = {
     val mode = if (isStreaming) "STREAMING" else "BATCH"
     logger.info(s"Loading to DeltaLake in $mode mode")
 
@@ -235,11 +246,11 @@ object LoadMethods {
       // Streaming write
       logger.info(s"Writing stream to DeltaLake: $path")
 
-      val checkpointLocation = config.getOrElse("checkpointLocation",
-        s"/tmp/checkpoints/delta_${java.util.UUID.randomUUID().toString}"
-      ).toString
+      val checkpointLocation = config
+        .getOrElse("checkpointLocation", s"/tmp/checkpoints/delta_${java.util.UUID.randomUUID().toString}")
+        .toString
 
-      val outputMode = config.getOrElse("outputMode", "append").toString
+      val outputMode      = config.getOrElse("outputMode", "append").toString
       val triggerInterval = config.getOrElse("trigger", "5 seconds").toString
 
       var streamWriter = df.writeStream
@@ -251,18 +262,18 @@ object LoadMethods {
       config.get("partitionBy") match {
         case Some(columns: List[_]) =>
           streamWriter = streamWriter.partitionBy(columns.map(_.toString): _*)
-        case Some(column: String) =>
+        case Some(column: String)   =>
           streamWriter = streamWriter.partitionBy(column)
-        case _ => // No partitioning
+        case _                      => // No partitioning
       }
 
       // Add merge schema option if specified
       config.get("mergeSchema") match {
         case Some(merge: Boolean) =>
           streamWriter = streamWriter.option("mergeSchema", merge.toString)
-        case Some(merge: String) =>
+        case Some(merge: String)  =>
           streamWriter = streamWriter.option("mergeSchema", merge)
-        case _ => // No merge schema
+        case _                    => // No merge schema
       }
 
       // Parse trigger
@@ -281,22 +292,22 @@ object LoadMethods {
       // Add partitioning if specified
       val partitionedWriter = config.get("partitionBy") match {
         case Some(columns: List[_]) => writer.partitionBy(columns.map(_.toString): _*)
-        case Some(column: String) => writer.partitionBy(column)
-        case _ => writer
+        case Some(column: String)   => writer.partitionBy(column)
+        case _                      => writer
       }
 
       // Add merge schema option if specified
       val finalWriter = config.get("mergeSchema") match {
         case Some(merge: Boolean) => partitionedWriter.option("mergeSchema", merge.toString)
-        case Some(merge: String) => partitionedWriter.option("mergeSchema", merge)
-        case _ => partitionedWriter
+        case Some(merge: String)  => partitionedWriter.option("mergeSchema", merge)
+        case _                    => partitionedWriter
       }
 
       // Add overwrite schema option if specified
       val overwriteWriter = config.get("overwriteSchema") match {
         case Some(overwrite: Boolean) => finalWriter.option("overwriteSchema", overwrite.toString)
-        case Some(overwrite: String) => finalWriter.option("overwriteSchema", overwrite)
-        case _ => finalWriter
+        case Some(overwrite: String)  => finalWriter.option("overwriteSchema", overwrite)
+        case _                        => finalWriter
       }
 
       overwriteWriter.save(path)
@@ -308,17 +319,17 @@ object LoadMethods {
   /**
    * Resolves JDBC credentials from Vault or config.
    */
-  private def resolveJdbcCredentials(config: Map[String, Any], credentialType: String): JdbcConfig = {
+  private def resolveJdbcCredentials(config: Map[String, Any], credentialType: String): JdbcConfig =
     config.get("credentialPath") match {
       case Some(path) =>
         val vaultClient = VaultClient.fromEnv()
         vaultClient.readSecret(path.toString) match {
           case Success(data) =>
             CredentialConfigFactory.create(credentialType, data).asInstanceOf[JdbcConfig]
-          case Failure(ex) =>
+          case Failure(ex)   =>
             throw new RuntimeException(s"Failed to read credentials from Vault: ${ex.getMessage}", ex)
         }
-      case None =>
+      case None       =>
         // Fallback to credentials in config (not recommended for production)
         logger.warn("Using credentials from config file - not recommended for production")
         JdbcConfig(
@@ -328,63 +339,63 @@ object LoadMethods {
           username = config.getOrElse("username", "").toString,
           password = config.getOrElse("password", "").toString,
           credentialType = credentialType,
-          properties = config.getOrElse("properties", Map.empty[String, String]).asInstanceOf[Map[String, String]]
+          properties = config.getOrElse("properties", Map.empty[String, String]).asInstanceOf[Map[String, String]],
         )
     }
-  }
 
   /**
    * Resolves S3/IAM credentials from Vault or config.
    */
-  private def resolveS3Credentials(config: Map[String, Any]): IAMConfig = {
+  private def resolveS3Credentials(config: Map[String, Any]): IAMConfig =
     config.get("credentialPath") match {
       case Some(path) =>
         val vaultClient = VaultClient.fromEnv()
         vaultClient.readSecret(path.toString) match {
           case Success(data) =>
             CredentialConfigFactory.create("iam", data).asInstanceOf[IAMConfig]
-          case Failure(ex) =>
+          case Failure(ex)   =>
             throw new RuntimeException(s"Failed to read S3 credentials from Vault: ${ex.getMessage}", ex)
         }
-      case None =>
+      case None       =>
         // Fallback to credentials in config (not recommended for production)
         logger.warn("Using S3 credentials from config file - not recommended for production")
         IAMConfig(
           accessKeyId = config.getOrElse("accessKeyId", "").toString,
           secretAccessKey = config.getOrElse("secretAccessKey", "").toString,
           sessionToken = config.get("sessionToken").map(_.toString),
-          region = config.getOrElse("region", "us-east-1").toString
+          region = config.getOrElse("region", "us-east-1").toString,
         )
     }
-  }
 
   /**
    * Resolves Kafka credentials from Vault or config.
    */
-  private def resolveKafkaCredentials(config: Map[String, Any]): Map[String, Any] = {
+  private def resolveKafkaCredentials(config: Map[String, Any]): Map[String, Any] =
     config.get("credentialPath") match {
       case Some(path) =>
         val vaultClient = VaultClient.fromEnv()
         vaultClient.readSecret(path.toString) match {
           case Success(data) => data
-          case Failure(ex) =>
+          case Failure(ex)   =>
             throw new RuntimeException(s"Failed to read Kafka credentials from Vault: ${ex.getMessage}", ex)
         }
-      case None =>
+      case None       =>
         // Use Kafka config directly
         config
     }
-  }
 
   /**
    * Parses SaveMode from string.
    */
   private def parseSaveMode(mode: String): SaveMode = mode.toLowerCase match {
-    case "append" => SaveMode.Append
-    case "overwrite" => SaveMode.Overwrite
+    case "append"        => SaveMode.Append
+    case "overwrite"     => SaveMode.Overwrite
     case "errorifexists" => SaveMode.ErrorIfExists
-    case "ignore" => SaveMode.Ignore
-    case _ => throw new IllegalArgumentException(s"Invalid save mode: $mode. Must be one of: append, overwrite, errorifexists, ignore")
+    case "ignore"        => SaveMode.Ignore
+    case _               =>
+      throw new IllegalArgumentException(
+        s"Invalid save mode: $mode. Must be one of: append, overwrite, errorifexists, ignore",
+      )
   }
 
   /**
@@ -394,15 +405,15 @@ object LoadMethods {
     import org.apache.spark.sql.streaming.Trigger
 
     triggerStr.toLowerCase match {
-      case "once" => Trigger.Once()
-      case s if s.startsWith("processingtime") =>
+      case "once"                                                                     => Trigger.Once()
+      case s if s.startsWith("processingtime")                                        =>
         // Format: "processingTime=5 seconds"
         val duration = s.split("=")(1).trim
         Trigger.ProcessingTime(duration)
       case s if s.contains("seconds") || s.contains("minutes") || s.contains("hours") =>
         // Format: "5 seconds", "1 minute", etc.
         Trigger.ProcessingTime(triggerStr)
-      case _ =>
+      case _                                                                          =>
         logger.warn(s"Unknown trigger format: $triggerStr, defaulting to 5 seconds")
         Trigger.ProcessingTime("5 seconds")
     }

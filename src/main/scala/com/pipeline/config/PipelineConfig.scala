@@ -29,13 +29,12 @@ object PipelineConfig {
    * @param mode Execution mode to validate
    * @throws IllegalArgumentException if mode is invalid
    */
-  def validateMode(mode: String): Unit = {
+  def validateMode(mode: String): Unit =
     if (!ValidModes.contains(mode)) {
       throw new IllegalArgumentException(
         s"Invalid mode: '$mode'. Must be one of: ${ValidModes.mkString(", ")}",
       )
     }
-  }
 
   /**
    * Validates the entire pipeline configuration.

@@ -44,7 +44,7 @@ case class VaultClient(
    * @param path Vault secret path
    * @return Try containing Map of secret data or failure
    */
-  def readSecret(path: String): Try[Map[String, Any]] = {
+  def readSecret(path: String): Try[Map[String, Any]] =
     Try {
       logger.info(s"Reading secret from Vault: $path")
 
@@ -65,7 +65,6 @@ case class VaultClient(
       logger.error(s"Error reading secret from Vault at path $path: ${ex.getMessage}", ex)
       Failure(ex)
     }
-  }
 
   /**
    * Writes a secret to Vault at the given path.
@@ -74,7 +73,7 @@ case class VaultClient(
    * @param data Secret data to write
    * @return Try indicating success or failure
    */
-  def writeSecret(path: String, data: Map[String, Any]): Try[Unit] = {
+  def writeSecret(path: String, data: Map[String, Any]): Try[Unit] =
     Try {
       logger.info(s"Writing secret to Vault: $path")
 
@@ -93,7 +92,6 @@ case class VaultClient(
       logger.error(s"Error writing secret to Vault at path $path: ${ex.getMessage}", ex)
       Failure(ex)
     }
-  }
 }
 
 /**
@@ -144,8 +142,8 @@ object VaultClient {
       token: Option[String] = None,
       namespace: Option[String] = None,
   ): VaultClient = {
-    val finalAddress = address.orElse(sys.env.get("VAULT_ADDR")).getOrElse("http://localhost:8200")
-    val finalToken = token.orElse(sys.env.get("VAULT_TOKEN")).getOrElse("")
+    val finalAddress   = address.orElse(sys.env.get("VAULT_ADDR")).getOrElse("http://localhost:8200")
+    val finalToken     = token.orElse(sys.env.get("VAULT_TOKEN")).getOrElse("")
     val finalNamespace = namespace.orElse(sys.env.get("VAULT_NAMESPACE"))
 
     VaultClient(finalAddress, finalToken, finalNamespace)
