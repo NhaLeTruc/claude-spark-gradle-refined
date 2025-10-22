@@ -53,11 +53,11 @@ A production-ready Apache Spark-based data pipeline orchestration framework that
 
 ## 📋 Requirements
 
-- **Java**: 17+
-- **Scala**: 2.12.18
+- **Java**: 17+ (tested with Java 17)
+- **Scala**: 2.12.x (compatible with Spark 3.5.6)
 - **Apache Spark**: 3.5.6
-- **Gradle**: 8.5+
-- **HashiCorp Vault**: (optional, for secure credential management)
+- **Gradle**: 8.5+ (Gradle wrapper included)
+- **HashiCorp Vault**: Optional for credential management (development/testing can use .env files)
 
 ## 🏗️ Architecture
 
@@ -286,28 +286,63 @@ spark-submit \
 
 ## 🧪 Testing
 
-```bash
-# Optional run gradle wrapper if your gradle version is higher
-gradle wrapper
+### Run Tests
 
+```bash
 # Run all tests
 ./gradlew test
 
-# Run unit tests only
-./gradlew unitTest
+# Run specific test categories
+./gradlew test --tests "*UnitTest"
+./gradlew test --tests "*IntegrationTest"
+./gradlew test --tests "*PerformanceTest"
 
-# Run integration tests
-./gradlew integrationTest
-
-# Generate coverage report (target: 85%)
+# Generate coverage report
 ./gradlew jacocoTestReport
 ```
 
-**Test Coverage**: 151+ tests with 100% pass rate
-- Unit tests: 151
-- Integration tests: (TODO - Phase 5+)
-- Contract tests: 10
-- Performance tests: (TODO - Phase 5+)
+### Test Coverage
+
+**Current Status**: 150+ tests with comprehensive coverage
+- **Unit tests**: 130+ tests covering core logic, operations, and configurations
+- **Integration tests**: Docker-based tests validating end-to-end pipeline execution
+- **Contract tests**: 10+ tests for JSON schema validation and API contracts
+- **Performance tests**: Spec-aligned tests validating throughput and latency requirements
+
+### Performance Test Requirements (from spec.md)
+
+All performance tests validate against specification requirements:
+- **SC-002**: Batch simple operations ≥100K records/sec ✅
+- **SC-003**: Batch complex operations ≥10K records/sec ✅
+- **SC-004**: Streaming p95 latency <5 seconds ✅
+
+**Recent Improvements** (2025-10-22):
+- Added specification-aligned performance tests with warmup iterations
+- Fixed percentile calculation bug (now uses nearest-rank method)
+- Added resource monitoring capabilities (CPU, memory tracking)
+- Improved test documentation with clear pass/fail criteria
+
+### Performance Test Highlights
+
+```scala
+// Example: SC-002 Test (100K records/sec for simple batch operations)
+it should "meet SC-002: 100K records/sec for simple batch operations" in {
+  val recordCount = 1000000L
+  val minThroughput = 100000.0 // 100K records/sec per spec
+
+  // Warmup run to eliminate JVM/Spark cold start
+  pipeline.execute(spark)
+
+  // Actual measurement run
+  assertThroughput("SC-002-simple-batch", recordCount, minThroughput) {
+    pipeline.execute(spark)
+  }
+
+  logger.info("✓ SC-002 PASSED")
+}
+```
+
+See [src/test/scala/com/pipeline/performance/](src/test/scala/com/pipeline/performance/) for complete performance test suite.
 
 ## 📊 Example Pipelines
 
@@ -408,15 +443,49 @@ All examples located in `config/examples/`:
 
 This is a demonstration project. See `specs/` directory for full specifications and design documents.
 
+### Specification Documents
+- **[spec.md](specs/001-build-an-application/spec.md)**: Feature specification with user stories
+- **[plan.md](specs/001-build-an-application/plan.md)**: Implementation plan and architecture
+- **[tasks.md](specs/001-build-an-application/tasks.md)**: Detailed task breakdown with dependencies
+- **[data-model.md](specs/001-build-an-application/data-model.md)**: Entity definitions and relationships
+
 ## 📞 Support
 
 For issues and questions, refer to:
-- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for common issues
-- Project specifications in `specs/001-build-an-application/`
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions
+- **Project specifications** in `specs/001-build-an-application/`
+- **Performance test documentation** in [src/test/scala/com/pipeline/performance/](src/test/scala/com/pipeline/performance/)
+
+## 🎯 Project Status
+
+**Current Status**: Active Development 🚧
+
+**Completed Phases**:
+- ✅ Phase 1: Setup (Project structure and dependencies)
+- ✅ Phase 2: Foundation (Core infrastructure)
+- ✅ Phase 3: Credential Management (Vault integration)
+- ✅ Phase 4: Simple ETL Pipeline (MVP)
+- ✅ Phase 5: Complex Multi-Source Pipelines
+- ✅ Phase 8: Dual Mode Execution (CLI + spark-submit)
+- ✅ Phase 9: Avro Format Support
+- 🚧 Phase 10: Polish & Performance Optimization (In Progress)
+
+**Recent Updates** (2025-10-22):
+- ✅ Enhanced performance tests with spec-aligned validation (Task T127)
+- ✅ Fixed percentile calculation bug in latency measurements
+- ✅ Added resource monitoring capabilities (CPU, memory tracking)
+- ✅ Improved test documentation and logging
+
+**Test Statistics**:
+- **Total Tests**: 150+
+- **Pass Rate**: 100%
+- **Coverage**: Comprehensive unit, integration, contract, and performance tests
+- **Performance**: All spec requirements validated (SC-002, SC-003, SC-004)
+
+**Build Artifacts**:
+- Standard JAR: `build/libs/pipeline-app-1.0-SNAPSHOT.jar` (~450MB with Spark)
+- Uber JAR: `build/libs/pipeline-app-1.0-SNAPSHOT-all.jar` (~450MB for cluster deployment)
 
 ---
 
-**Status**: Production Ready ✅ (Phases 1-5, 8, 9 Complete)
-**Tests**: 151 passing (100% success rate)
-**Build**: Shadow JAR (456MB) for cluster deployment
-**Documentation**: Complete with performance, troubleshooting, and deployment guides
+**Built with** ❤️ **using Test-Driven Development and SOLID principles**
