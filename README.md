@@ -100,7 +100,7 @@ src/main/scala/com/pipeline/
 gradle wrapper
 
 # Build standard JAR (includes Spark for local execution)
-./gradlew build
+./gradlew clean build
 
 # Build uber-JAR (excludes Spark for cluster execution)
 ./gradlew shadowJar
@@ -293,9 +293,10 @@ spark-submit \
 ./gradlew test
 
 # Run specific test categories
-./gradlew test --tests "*UnitTest"
-./gradlew test --tests "*IntegrationTest"
-./gradlew test --tests "*PerformanceTest"
+./gradlew test --tests "com.pipeline.unit.*"
+./gradlew test --tests "com.pipeline.contract.*"
+./gradlew test --tests "com.pipeline.integration.*"
+./gradlew test --tests "com.pipeline.performance.*"
 
 # Generate coverage report
 ./gradlew jacocoTestReport
