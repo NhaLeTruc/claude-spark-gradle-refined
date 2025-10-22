@@ -40,9 +40,9 @@ case class JdbcConfig(
   def jdbcUrl: String = credentialType.toLowerCase match {
     case "postgres" | "postgresql" =>
       s"jdbc:postgresql://$host:$port/$database"
-    case "mysql" =>
+    case "mysql"                   =>
       s"jdbc:mysql://$host:$port/$database"
-    case other =>
+    case other                     =>
       throw new IllegalArgumentException(s"Unsupported JDBC type: $other")
   }
 }

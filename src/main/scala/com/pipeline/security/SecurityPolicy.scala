@@ -45,9 +45,8 @@ case class SecurityPolicy(
    *
    * @return true if plain text credentials can be used
    */
-  def canUsePlainTextCredentials: Boolean = {
+  def canUsePlainTextCredentials: Boolean =
     !vaultOnlyMode && allowPlainTextCredentials
-  }
 
   /**
    * Checks if Vault is required for credentials.
@@ -112,8 +111,8 @@ object SecurityPolicy {
    * @return SecurityPolicy from environment
    */
   def fromEnv(): SecurityPolicy = {
-    val vaultOnly = sys.env.get("PIPELINE_VAULT_ONLY").exists(_.toLowerCase == "true")
-    val auditEnabled = sys.env.get("PIPELINE_AUDIT_CREDENTIALS").forall(_.toLowerCase != "false")
+    val vaultOnly      = sys.env.get("PIPELINE_VAULT_ONLY").exists(_.toLowerCase == "true")
+    val auditEnabled   = sys.env.get("PIPELINE_AUDIT_CREDENTIALS").forall(_.toLowerCase != "false")
     val allowPlainText = sys.env.get("PIPELINE_ALLOW_PLAINTEXT").forall(_.toLowerCase != "false")
 
     logger.info(

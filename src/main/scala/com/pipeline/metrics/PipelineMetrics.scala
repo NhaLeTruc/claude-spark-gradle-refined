@@ -18,18 +18,18 @@ case class PipelineMetrics(
 
   private val logger: Logger = LoggerFactory.getLogger(getClass)
 
-  var endTime: Option[Long] = None
-  var status: String = "RUNNING"
+  var endTime: Option[Long]        = None
+  var status: String               = "RUNNING"
   var errorMessage: Option[String] = None
 
   // Step-level metrics
   private val stepMetrics = mutable.ListBuffer[StepMetrics]()
 
   // Overall metrics
-  var totalRecordsRead: Long = 0
+  var totalRecordsRead: Long    = 0
   var totalRecordsWritten: Long = 0
-  var totalBytesRead: Long = 0
-  var totalBytesWritten: Long = 0
+  var totalBytesRead: Long      = 0
+  var totalBytesWritten: Long   = 0
 
   /**
    * Records the start of a pipeline step.
@@ -53,7 +53,7 @@ case class PipelineMetrics(
       recordsWritten: Long = 0,
       bytesRead: Long = 0,
       bytesWritten: Long = 0,
-  ): Unit = {
+  ): Unit =
     stepMetrics.find(_.stepIndex == stepIndex) match {
       case Some(metrics) =>
         metrics.endTime = Some(System.currentTimeMillis())
@@ -74,12 +74,11 @@ case class PipelineMetrics(
       case None =>
         logger.warn(s"No start metrics found for step $stepIndex")
     }
-  }
 
   /**
    * Records a step failure.
    */
-  def failStep(stepIndex: Int, error: String): Unit = {
+  def failStep(stepIndex: Int, error: String): Unit =
     stepMetrics.find(_.stepIndex == stepIndex) match {
       case Some(metrics) =>
         metrics.endTime = Some(System.currentTimeMillis())
@@ -90,7 +89,6 @@ case class PipelineMetrics(
       case None =>
         logger.warn(s"No start metrics found for failed step $stepIndex")
     }
-  }
 
   /**
    * Marks the pipeline as completed successfully.
@@ -98,7 +96,9 @@ case class PipelineMetrics(
   def complete(): Unit = {
     endTime = Some(System.currentTimeMillis())
     status = "COMPLETED"
-    logger.info(s"Pipeline completed: $pipelineName, duration=${durationMs}ms, records=$totalRecordsRead→$totalRecordsWritten")
+    logger.info(
+      s"Pipeline completed: $pipelineName, duration=${durationMs}ms, records=$totalRecordsRead→$totalRecordsWritten",
+    )
   }
 
   /**
@@ -123,9 +123,8 @@ case class PipelineMetrics(
   /**
    * Gets the total duration in milliseconds.
    */
-  def durationMs: Long = {
+  def durationMs: Long =
     endTime.getOrElse(System.currentTimeMillis()) - startTime
-  }
 
   /**
    * Gets all step metrics.
@@ -135,22 +134,21 @@ case class PipelineMetrics(
   /**
    * Converts metrics to a map for serialization.
    */
-  def toMap: Map[String, Any] = {
+  def toMap: Map[String, Any] =
     Map(
-      "pipelineName" -> pipelineName,
-      "mode" -> mode,
-      "status" -> status,
-      "startTime" -> startTime,
-      "endTime" -> endTime.getOrElse(System.currentTimeMillis()),
-      "durationMs" -> durationMs,
-      "totalRecordsRead" -> totalRecordsRead,
+      "pipelineName"        -> pipelineName,
+      "mode"                -> mode,
+      "status"              -> status,
+      "startTime"           -> startTime,
+      "endTime"             -> endTime.getOrElse(System.currentTimeMillis()),
+      "durationMs"          -> durationMs,
+      "totalRecordsRead"    -> totalRecordsRead,
       "totalRecordsWritten" -> totalRecordsWritten,
-      "totalBytesRead" -> totalBytesRead,
-      "totalBytesWritten" -> totalBytesWritten,
-      "errorMessage" -> errorMessage.getOrElse(""),
-      "steps" -> stepMetrics.map(_.toMap).toList,
+      "totalBytesRead"      -> totalBytesRead,
+      "totalBytesWritten"   -> totalBytesWritten,
+      "errorMessage"        -> errorMessage.getOrElse(""),
+      "steps"               -> stepMetrics.map(_.toMap).toList,
     )
-  }
 
   /**
    * Converts metrics to JSON string.
@@ -173,41 +171,39 @@ case class StepMetrics(
     startTime: Long,
 ) {
 
-  var endTime: Option[Long] = None
-  var status: String = "RUNNING"
+  var endTime: Option[Long]        = None
+  var status: String               = "RUNNING"
   var errorMessage: Option[String] = None
 
-  var recordsRead: Long = 0
+  var recordsRead: Long    = 0
   var recordsWritten: Long = 0
-  var bytesRead: Long = 0
-  var bytesWritten: Long = 0
+  var bytesRead: Long      = 0
+  var bytesWritten: Long   = 0
 
   /**
    * Gets the step duration in milliseconds.
    */
-  def durationMs: Long = {
+  def durationMs: Long =
     endTime.getOrElse(System.currentTimeMillis()) - startTime
-  }
 
   /**
    * Converts step metrics to a map.
    */
-  def toMap: Map[String, Any] = {
+  def toMap: Map[String, Any] =
     Map(
-      "stepIndex" -> stepIndex,
-      "stepType" -> stepType,
-      "method" -> method,
-      "status" -> status,
-      "startTime" -> startTime,
-      "endTime" -> endTime.getOrElse(System.currentTimeMillis()),
-      "durationMs" -> durationMs,
-      "recordsRead" -> recordsRead,
+      "stepIndex"      -> stepIndex,
+      "stepType"       -> stepType,
+      "method"         -> method,
+      "status"         -> status,
+      "startTime"      -> startTime,
+      "endTime"        -> endTime.getOrElse(System.currentTimeMillis()),
+      "durationMs"     -> durationMs,
+      "recordsRead"    -> recordsRead,
       "recordsWritten" -> recordsWritten,
-      "bytesRead" -> bytesRead,
-      "bytesWritten" -> bytesWritten,
-      "errorMessage" -> errorMessage.getOrElse(""),
+      "bytesRead"      -> bytesRead,
+      "bytesWritten"   -> bytesWritten,
+      "errorMessage"   -> errorMessage.getOrElse(""),
     )
-  }
 }
 
 /**
@@ -218,7 +214,6 @@ object PipelineMetrics {
   /**
    * Creates metrics for a pipeline.
    */
-  def apply(pipelineName: String, mode: String): PipelineMetrics = {
+  def apply(pipelineName: String, mode: String): PipelineMetrics =
     new PipelineMetrics(pipelineName, mode)
-  }
 }

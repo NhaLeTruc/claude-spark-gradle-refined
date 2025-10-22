@@ -23,8 +23,8 @@ object PrometheusExporter {
 
     // Pipeline-level metrics
     val safePipelineName = sanitizeLabelValue(metrics.pipelineName)
-    val safeMode = sanitizeLabelValue(metrics.mode)
-    val safeStatus = sanitizeLabelValue(metrics.status)
+    val safeMode         = sanitizeLabelValue(metrics.mode)
+    val safeStatus       = sanitizeLabelValue(metrics.status)
 
     // Duration gauge
     lines += s"""# HELP pipeline_duration_ms Pipeline execution duration in milliseconds"""
@@ -58,8 +58,8 @@ object PrometheusExporter {
 
     // Step-level metrics
     metrics.getStepMetrics.foreach { step =>
-      val safeStepType = sanitizeLabelValue(step.stepType)
-      val safeMethod = sanitizeLabelValue(step.method)
+      val safeStepType   = sanitizeLabelValue(step.stepType)
+      val safeMethod     = sanitizeLabelValue(step.method)
       val safeStepStatus = sanitizeLabelValue(step.status)
 
       // Step duration
@@ -93,12 +93,11 @@ object PrometheusExporter {
    * @param value The label value to sanitize
    * @return Sanitized label value
    */
-  private def sanitizeLabelValue(value: String): String = {
+  private def sanitizeLabelValue(value: String): String =
     value
       .replace("\\", "\\\\")
       .replace("\"", "\\\"")
       .replace("\n", "\\n")
-  }
 
   /**
    * Exports metrics and writes to a file.
@@ -106,20 +105,17 @@ object PrometheusExporter {
    * @param metrics    The pipeline metrics to export
    * @param outputPath Path to write the metrics file
    */
-  def exportToFile(metrics: PipelineMetrics, outputPath: String): Unit = {
+  def exportToFile(metrics: PipelineMetrics, outputPath: String): Unit =
     try {
       val metricsText = export(metrics)
-      val writer = new java.io.PrintWriter(new java.io.File(outputPath))
+      val writer      = new java.io.PrintWriter(new java.io.File(outputPath))
       try {
         writer.write(metricsText)
         logger.info(s"Exported Prometheus metrics to file: $outputPath")
-      } finally {
-        writer.close()
-      }
+      } finally writer.close()
     } catch {
       case ex: Exception =>
         logger.error(s"Failed to export Prometheus metrics to file: $outputPath", ex)
         throw ex
     }
-  }
 }

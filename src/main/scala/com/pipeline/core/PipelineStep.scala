@@ -44,9 +44,8 @@ sealed trait PipelineStep {
    * @return Final pipeline context after chain execution
    * @throws PipelineException if execution fails
    */
-  def executeChain(context: PipelineContext, spark: SparkSession): PipelineContext = {
+  def executeChain(context: PipelineContext, spark: SparkSession): PipelineContext =
     executeChainWithContext(context, spark, pipelineName = None, stepIndex = None)
-  }
 
   /**
    * Internal method for executing chain with context information.
@@ -66,8 +65,8 @@ sealed trait PipelineStep {
       stepIndex: Option[Int],
       metricsCollector: Option[com.pipeline.metrics.PipelineMetrics] = None,
   ): PipelineContext = {
-    val logger = LoggerFactory.getLogger(getClass)
-    val stepType = getStepType
+    val logger           = LoggerFactory.getLogger(getClass)
+    val stepType         = getStepType
     val currentStepIndex = stepIndex.getOrElse(0)
 
     logger.info(s"Executing step: ${this.getClass.getSimpleName}, method: $method")
@@ -118,10 +117,10 @@ sealed trait PipelineStep {
    * Get the step type name (extract, transform, validate, load).
    */
   private def getStepType: String = this match {
-    case _: ExtractStep => "extract"
+    case _: ExtractStep   => "extract"
     case _: TransformStep => "transform"
-    case _: ValidateStep => "validate"
-    case _: LoadStep => "load"
+    case _: ValidateStep  => "validate"
+    case _: LoadStep      => "load"
   }
 }
 
@@ -157,7 +156,7 @@ case class ExtractStep(
       case Some(name) =>
         logger.info(s"Registering DataFrame as: $name")
         context.register(name.toString, df).updatePrimary(Right(df))
-      case None =>
+      case None       =>
         context.updatePrimary(Right(df))
     }
 
@@ -165,7 +164,8 @@ case class ExtractStep(
     val updatedContext = config.get("cache") match {
       case Some(true) | Some("true") =>
         val registerName = config.get("registerAs").map(_.toString).getOrElse("__primary__")
-        val storageLevel = PipelineStepUtils.parseStorageLevel(config.getOrElse("cacheStorageLevel", "MEMORY_AND_DISK").toString)
+        val storageLevel =
+          PipelineStepUtils.parseStorageLevel(config.getOrElse("cacheStorageLevel", "MEMORY_AND_DISK").toString)
 
         logger.info(s"Caching DataFrame with storage level: $storageLevel")
         if (registerName == "__primary__") {
@@ -184,17 +184,16 @@ case class ExtractStep(
   /**
    * Delegates to ExtractMethods based on method name.
    */
-  private def extractData(spark: SparkSession, isStreaming: Boolean): DataFrame = {
+  private def extractData(spark: SparkSession, isStreaming: Boolean): DataFrame =
     method match {
-      case "fromPostgres" => ExtractMethods.fromPostgres(config, spark)
-      case "fromMySQL" => ExtractMethods.fromMySQL(config, spark)
-      case "fromKafka" => ExtractMethods.fromKafka(config, spark, isStreaming)
-      case "fromS3" => ExtractMethods.fromS3(config, spark)
+      case "fromPostgres"  => ExtractMethods.fromPostgres(config, spark)
+      case "fromMySQL"     => ExtractMethods.fromMySQL(config, spark)
+      case "fromKafka"     => ExtractMethods.fromKafka(config, spark, isStreaming)
+      case "fromS3"        => ExtractMethods.fromS3(config, spark)
       case "fromDeltaLake" => ExtractMethods.fromDeltaLake(config, spark)
-      case "fromAvro" => ExtractMethods.fromAvro(config, spark)
-      case _ => throw new IllegalArgumentException(s"Unknown extract method: $method")
+      case "fromAvro"      => ExtractMethods.fromAvro(config, spark)
+      case _               => throw new IllegalArgumentException(s"Unknown extract method: $method")
     }
-  }
 }
 
 /**
@@ -229,7 +228,7 @@ case class TransformStep(
         }.toMap
 
         if (resolvedDFs.size != dfNames.size) {
-          val missing = dfNames.filterNot(resolvedDFs.contains)
+          val missing   = dfNames.filterNot(resolvedDFs.contains)
           val available = context.dataFrames.keySet.toSet
           // Throw first missing DataFrame as exception
           throw new DataFrameResolutionException(
@@ -242,7 +241,7 @@ case class TransformStep(
 
         config ++ Map("resolvedDataFrames" -> resolvedDFs)
 
-      case _ =>
+      case _                    =>
         config
     }
 
@@ -254,7 +253,7 @@ case class TransformStep(
       case Some(name) =>
         logger.info(s"Registering transformed DataFrame as: $name")
         context.register(name.toString, transformedDf).updatePrimary(Right(transformedDf))
-      case None =>
+      case None       =>
         context.updatePrimary(Right(transformedDf))
     }
 
@@ -264,22 +263,21 @@ case class TransformStep(
   /**
    * Delegates to UserMethods based on method name.
    */
-  private def transformData(df: DataFrame, cfg: Map[String, Any], spark: SparkSession): DataFrame = {
+  private def transformData(df: DataFrame, cfg: Map[String, Any], spark: SparkSession): DataFrame =
     method match {
-      case "filterRows" => UserMethods.filterRows(df, cfg, spark)
-      case "enrichData" => UserMethods.enrichData(df, cfg, spark)
-      case "joinDataFrames" => UserMethods.joinDataFrames(df, cfg, spark)
-      case "aggregateData" => UserMethods.aggregateData(df, cfg, spark)
-      case "reshapeData" => UserMethods.reshapeData(df, cfg, spark)
-      case "unionDataFrames" => UserMethods.unionDataFrames(df, cfg, spark)
-      case "toAvroSchema" => UserMethods.toAvroSchema(df, cfg, spark)
-      case "evolveAvroSchema" => UserMethods.evolveAvroSchema(df, cfg, spark)
-      case "repartition" => UserMethods.repartition(df, cfg, spark)
+      case "filterRows"           => UserMethods.filterRows(df, cfg, spark)
+      case "enrichData"           => UserMethods.enrichData(df, cfg, spark)
+      case "joinDataFrames"       => UserMethods.joinDataFrames(df, cfg, spark)
+      case "aggregateData"        => UserMethods.aggregateData(df, cfg, spark)
+      case "reshapeData"          => UserMethods.reshapeData(df, cfg, spark)
+      case "unionDataFrames"      => UserMethods.unionDataFrames(df, cfg, spark)
+      case "toAvroSchema"         => UserMethods.toAvroSchema(df, cfg, spark)
+      case "evolveAvroSchema"     => UserMethods.evolveAvroSchema(df, cfg, spark)
+      case "repartition"          => UserMethods.repartition(df, cfg, spark)
       case "repartitionByColumns" => UserMethods.repartitionByColumns(df, cfg, spark)
-      case "coalesce" => UserMethods.coalesce(df, cfg, spark)
-      case _ => throw new IllegalArgumentException(s"Unknown transform method: $method")
+      case "coalesce"             => UserMethods.coalesce(df, cfg, spark)
+      case _                      => throw new IllegalArgumentException(s"Unknown transform method: $method")
     }
-  }
 }
 
 /**
@@ -319,7 +317,7 @@ case class ValidateStep(
           )
         }
         config ++ Map("resolvedReferencedDataFrame" -> refDf)
-      case _ =>
+      case _                     =>
         config
     }
 
@@ -334,16 +332,15 @@ case class ValidateStep(
    * Delegates to UserMethods validation methods based on method name.
    * Throws exception if validation fails.
    */
-  private def validateData(df: DataFrame, cfg: Map[String, Any], spark: SparkSession): Unit = {
+  private def validateData(df: DataFrame, cfg: Map[String, Any], spark: SparkSession): Unit =
     method match {
-      case "validateSchema" => UserMethods.validateSchema(df, cfg, spark)
-      case "validateNulls" => UserMethods.validateNulls(df, cfg, spark)
-      case "validateRanges" => UserMethods.validateRanges(df, cfg, spark)
+      case "validateSchema"               => UserMethods.validateSchema(df, cfg, spark)
+      case "validateNulls"                => UserMethods.validateNulls(df, cfg, spark)
+      case "validateRanges"               => UserMethods.validateRanges(df, cfg, spark)
       case "validateReferentialIntegrity" => UserMethods.validateReferentialIntegrity(df, cfg, spark)
-      case "validateBusinessRules" => UserMethods.validateBusinessRules(df, cfg, spark)
-      case _ => throw new IllegalArgumentException(s"Unknown validation method: $method")
+      case "validateBusinessRules"        => UserMethods.validateBusinessRules(df, cfg, spark)
+      case _                              => throw new IllegalArgumentException(s"Unknown validation method: $method")
     }
-  }
 }
 
 /**
@@ -367,7 +364,7 @@ case class LoadStep(
   override def execute(context: PipelineContext, spark: SparkSession): PipelineContext = {
     logger.info(s"Load step executing: method=$method")
 
-    val df = context.getPrimaryDataFrame
+    val df          = context.getPrimaryDataFrame
     val isStreaming = context.isStreamingMode
 
     // Load logic delegated to LoadMethods
@@ -379,11 +376,11 @@ case class LoadStep(
         // Generate query name from config or use method-based default
         val queryName = config.get("queryName") match {
           case Some(name) => name.toString
-          case None => s"${method}_${java.util.UUID.randomUUID().toString.take(8)}"
+          case None       => s"${method}_${java.util.UUID.randomUUID().toString.take(8)}"
         }
         logger.info(s"Registering streaming query: $queryName")
         context.registerStreamingQuery(queryName, query)
-      case None =>
+      case None        =>
         logger.info(s"Batch load completed: $method")
         context
     }
@@ -395,17 +392,20 @@ case class LoadStep(
    * Delegates to LoadMethods based on method name.
    * Returns Option[StreamingQuery] for streaming-capable methods.
    */
-  private def loadData(df: DataFrame, spark: SparkSession, isStreaming: Boolean): Option[org.apache.spark.sql.streaming.StreamingQuery] = {
+  private def loadData(
+      df: DataFrame,
+      spark: SparkSession,
+      isStreaming: Boolean,
+  ): Option[org.apache.spark.sql.streaming.StreamingQuery] =
     method match {
-      case "toPostgres" => LoadMethods.toPostgres(df, config, spark); None
-      case "toMySQL" => LoadMethods.toMySQL(df, config, spark); None
-      case "toKafka" => LoadMethods.toKafka(df, config, spark, isStreaming)
-      case "toS3" => LoadMethods.toS3(df, config, spark); None
+      case "toPostgres"  => LoadMethods.toPostgres(df, config, spark); None
+      case "toMySQL"     => LoadMethods.toMySQL(df, config, spark); None
+      case "toKafka"     => LoadMethods.toKafka(df, config, spark, isStreaming)
+      case "toS3"        => LoadMethods.toS3(df, config, spark); None
       case "toDeltaLake" => LoadMethods.toDeltaLake(df, config, spark, isStreaming)
-      case "toAvro" => LoadMethods.toAvro(df, config, spark); None
-      case _ => throw new IllegalArgumentException(s"Unknown load method: $method")
+      case "toAvro"      => LoadMethods.toAvro(df, config, spark); None
+      case _             => throw new IllegalArgumentException(s"Unknown load method: $method")
     }
-  }
 
 }
 
@@ -422,23 +422,22 @@ object PipelineStepUtils {
    * @param level Storage level string (e.g., "MEMORY_AND_DISK")
    * @return StorageLevel object
    */
-  def parseStorageLevel(level: String): StorageLevel = {
+  def parseStorageLevel(level: String): StorageLevel =
     level.toUpperCase match {
-      case "NONE" => StorageLevel.NONE
-      case "DISK_ONLY" => StorageLevel.DISK_ONLY
-      case "DISK_ONLY_2" => StorageLevel.DISK_ONLY_2
-      case "MEMORY_ONLY" => StorageLevel.MEMORY_ONLY
-      case "MEMORY_ONLY_2" => StorageLevel.MEMORY_ONLY_2
-      case "MEMORY_ONLY_SER" => StorageLevel.MEMORY_ONLY_SER
-      case "MEMORY_ONLY_SER_2" => StorageLevel.MEMORY_ONLY_SER_2
-      case "MEMORY_AND_DISK" => StorageLevel.MEMORY_AND_DISK
-      case "MEMORY_AND_DISK_2" => StorageLevel.MEMORY_AND_DISK_2
-      case "MEMORY_AND_DISK_SER" => StorageLevel.MEMORY_AND_DISK_SER
+      case "NONE"                  => StorageLevel.NONE
+      case "DISK_ONLY"             => StorageLevel.DISK_ONLY
+      case "DISK_ONLY_2"           => StorageLevel.DISK_ONLY_2
+      case "MEMORY_ONLY"           => StorageLevel.MEMORY_ONLY
+      case "MEMORY_ONLY_2"         => StorageLevel.MEMORY_ONLY_2
+      case "MEMORY_ONLY_SER"       => StorageLevel.MEMORY_ONLY_SER
+      case "MEMORY_ONLY_SER_2"     => StorageLevel.MEMORY_ONLY_SER_2
+      case "MEMORY_AND_DISK"       => StorageLevel.MEMORY_AND_DISK
+      case "MEMORY_AND_DISK_2"     => StorageLevel.MEMORY_AND_DISK_2
+      case "MEMORY_AND_DISK_SER"   => StorageLevel.MEMORY_AND_DISK_SER
       case "MEMORY_AND_DISK_SER_2" => StorageLevel.MEMORY_AND_DISK_SER_2
-      case "OFF_HEAP" => StorageLevel.OFF_HEAP
-      case _ =>
+      case "OFF_HEAP"              => StorageLevel.OFF_HEAP
+      case _                       =>
         logger.warn(s"Unknown storage level: $level, defaulting to MEMORY_AND_DISK")
         StorageLevel.MEMORY_AND_DISK
     }
-  }
 }

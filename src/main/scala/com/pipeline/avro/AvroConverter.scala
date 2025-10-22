@@ -4,7 +4,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.types.DataType
 import org.apache.avro.Schema
 import org.slf4j.{Logger, LoggerFactory}
-import scala.util.{Try, Success, Failure}
+import scala.util.{Failure, Success, Try}
 
 /**
  * Utilities for converting between Spark DataFrames and Avro format.
@@ -29,7 +29,9 @@ object AvroConverter {
    * @param config Configuration options
    * @param spark  SparkSession
    */
-  def writeAvro(df: DataFrame, path: String, config: Map[String, Any] = Map.empty)(implicit spark: SparkSession): Unit = {
+  def writeAvro(df: DataFrame, path: String, config: Map[String, Any] = Map.empty)(implicit
+      spark: SparkSession,
+  ): Unit = {
     logger.info(s"Writing DataFrame to Avro format at: $path")
 
     val writer = df.write
@@ -39,20 +41,20 @@ object AvroConverter {
     // Add partitioning if specified
     val partitionedWriter = config.get("partitionBy") match {
       case Some(columns: List[_]) => writer.partitionBy(columns.map(_.toString): _*)
-      case Some(column: String) => writer.partitionBy(column)
-      case _ => writer
+      case Some(column: String)   => writer.partitionBy(column)
+      case _                      => writer
     }
 
     // Add compression if specified
     val compressedWriter = config.get("compression") match {
       case Some(codec) => partitionedWriter.option("compression", codec.toString)
-      case None => partitionedWriter
+      case None        => partitionedWriter
     }
 
     // Add custom Avro schema if specified
     val finalWriter = config.get("avroSchema") match {
       case Some(schema: String) => compressedWriter.option("avroSchema", schema)
-      case _ => compressedWriter
+      case _                    => compressedWriter
     }
 
     finalWriter.save(path)
@@ -75,14 +77,14 @@ object AvroConverter {
     // Add schema inference mode if specified
     val schemaReader = config.get("inferSchema") match {
       case Some(infer: Boolean) => reader.option("inferSchema", infer.toString)
-      case Some(infer: String) => reader.option("inferSchema", infer)
-      case _ => reader
+      case Some(infer: String)  => reader.option("inferSchema", infer)
+      case _                    => reader
     }
 
     // Add custom Avro schema if specified
     val finalReader = config.get("avroSchema") match {
       case Some(schema: String) => schemaReader.option("avroSchema", schema)
-      case _ => schemaReader
+      case _                    => schemaReader
     }
 
     val df = finalReader.load(path)
@@ -104,7 +106,7 @@ object AvroConverter {
     // Use Spark's built-in Avro conversion
     import org.apache.spark.sql.avro.SchemaConverters
 
-    val avroType = SchemaConverters.toAvroType(df.schema, nullable = false, name, namespace)
+    val avroType   = SchemaConverters.toAvroType(df.schema, nullable = false, name, namespace)
     val avroSchema = avroType.toString
 
     logger.debug(s"Generated Avro schema: $avroSchema")
@@ -202,7 +204,7 @@ object AvroConverter {
     import org.apache.spark.sql.types._
 
     val currentColumns = df.columns.toSet
-    val targetFields = targetAvroSchema.getFields.asScala
+    val targetFields   = targetAvroSchema.getFields.asScala
 
     var evolvedDf = df
 
@@ -219,7 +221,7 @@ object AvroConverter {
 
     // Remove extra columns not in target schema
     val targetColumnNames = targetFields.map(_.name()).toSet
-    val columnsToKeep = evolvedDf.columns.filter(targetColumnNames.contains)
+    val columnsToKeep     = evolvedDf.columns.filter(targetColumnNames.contains)
 
     if (columnsToKeep.length < evolvedDf.columns.length) {
       val removed = evolvedDf.columns.filterNot(targetColumnNames.contains)
@@ -239,23 +241,23 @@ object AvroConverter {
     import org.apache.spark.sql.types._
 
     avroSchema.getType match {
-      case Schema.Type.STRING => StringType
-      case Schema.Type.INT => IntegerType
-      case Schema.Type.LONG => LongType
-      case Schema.Type.FLOAT => FloatType
-      case Schema.Type.DOUBLE => DoubleType
+      case Schema.Type.STRING  => StringType
+      case Schema.Type.INT     => IntegerType
+      case Schema.Type.LONG    => LongType
+      case Schema.Type.FLOAT   => FloatType
+      case Schema.Type.DOUBLE  => DoubleType
       case Schema.Type.BOOLEAN => BooleanType
-      case Schema.Type.BYTES => BinaryType
-      case Schema.Type.NULL => NullType
-      case Schema.Type.UNION =>
+      case Schema.Type.BYTES   => BinaryType
+      case Schema.Type.NULL    => NullType
+      case Schema.Type.UNION   =>
         // Handle nullable types (union of [null, type])
         import scala.collection.JavaConverters._
         val types = avroSchema.getTypes.asScala
         types.find(_.getType != Schema.Type.NULL) match {
           case Some(nonNullType) => avroTypeToSparkType(nonNullType)
-          case None => NullType
+          case None              => NullType
         }
-      case _ => StringType // Default fallback
+      case _                   => StringType // Default fallback
     }
   }
 
@@ -269,7 +271,9 @@ object AvroConverter {
    * @param config Configuration options
    * @param spark  SparkSession
    */
-  def writeParquetWithAvroSchema(df: DataFrame, path: String, config: Map[String, Any] = Map.empty)(implicit spark: SparkSession): Unit = {
+  def writeParquetWithAvroSchema(df: DataFrame, path: String, config: Map[String, Any] = Map.empty)(implicit
+      spark: SparkSession,
+  ): Unit = {
     logger.info(s"Writing DataFrame to Parquet with Avro schema at: $path")
 
     // Generate Avro schema
@@ -283,8 +287,8 @@ object AvroConverter {
     // Add partitioning if specified
     val partitionedWriter = config.get("partitionBy") match {
       case Some(columns: List[_]) => writer.partitionBy(columns.map(_.toString): _*)
-      case Some(column: String) => writer.partitionBy(column)
-      case _ => writer
+      case Some(column: String)   => writer.partitionBy(column)
+      case _                      => writer
     }
 
     // Add compression

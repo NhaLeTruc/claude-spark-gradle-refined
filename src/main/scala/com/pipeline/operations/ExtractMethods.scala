@@ -47,7 +47,7 @@ object ExtractMethods {
           .option("lowerBound", config.getOrElse("lowerBound", 0).toString)
           .option("upperBound", config.getOrElse("upperBound", 1000000).toString)
           .option("numPartitions", config.getOrElse("numPartitions", 10).toString)
-      case None => reader
+      case None         => reader
     }
 
     // Load by table or query
@@ -55,7 +55,7 @@ object ExtractMethods {
       case Some(query) =>
         logger.info(s"Executing query: $query")
         partitionedReader.option("query", query.toString).load()
-      case None =>
+      case None        =>
         val table = config("table").toString
         logger.info(s"Loading table: $table")
         partitionedReader.option("dbtable", table).load()
@@ -94,7 +94,7 @@ object ExtractMethods {
           .option("lowerBound", config.getOrElse("lowerBound", 0).toString)
           .option("upperBound", config.getOrElse("upperBound", 1000000).toString)
           .option("numPartitions", config.getOrElse("numPartitions", 10).toString)
-      case None => reader
+      case None         => reader
     }
 
     // Load by table or query
@@ -102,7 +102,7 @@ object ExtractMethods {
       case Some(query) =>
         logger.info(s"Executing query: $query")
         partitionedReader.option("query", query.toString).load()
-      case None =>
+      case None        =>
         val table = config("table").toString
         logger.info(s"Loading table: $table")
         partitionedReader.option("dbtable", table).load()
@@ -127,8 +127,8 @@ object ExtractMethods {
 
     require(config.contains("topic"), "'topic' is required")
 
-    val kafkaConfig = resolveKafkaCredentials(config)
-    val topic = config("topic").toString
+    val kafkaConfig      = resolveKafkaCredentials(config)
+    val topic            = config("topic").toString
     val bootstrapServers = kafkaConfig.get("bootstrap.servers").getOrElse("localhost:9092")
 
     // Create DataFrame based on mode
@@ -205,7 +205,7 @@ object ExtractMethods {
     spark.sparkContext.hadoopConfiguration.set("fs.s3a.endpoint", s"s3.${iamConfig.region}.amazonaws.com")
 
     val bucket = config("bucket").toString
-    val path = config("path").toString
+    val path   = config("path").toString
     val format = config.getOrElse("format", "parquet").toString
     val s3Path = s"s3a://$bucket$path"
 
@@ -215,7 +215,7 @@ object ExtractMethods {
 
     // Add format-specific options
     format.toLowerCase match {
-      case "csv" =>
+      case "csv"  =>
         reader
           .option("header", config.getOrElse("header", "true").toString)
           .option("inferSchema", config.getOrElse("inferSchema", "true").toString)
@@ -223,7 +223,7 @@ object ExtractMethods {
       case "json" =>
         config.get("inferSchema").foreach(v => reader.option("inferSchema", v.toString))
         config.get("multiLine").foreach(v => reader.option("multiLine", v.toString))
-      case _ => // parquet, avro, orc use defaults
+      case _      => // parquet, avro, orc use defaults
     }
 
     val df = reader.load(s3Path)
@@ -252,13 +252,13 @@ object ExtractMethods {
 
     // Time travel support
     val df = (config.get("version"), config.get("timestamp")) match {
-      case (Some(version), _) =>
+      case (Some(version), _)   =>
         logger.info(s"Reading DeltaLake at version: $version")
         reader.option("versionAsOf", version.toString).load(path)
       case (_, Some(timestamp)) =>
         logger.info(s"Reading DeltaLake at timestamp: $timestamp")
         reader.option("timestampAsOf", timestamp.toString).load(path)
-      case _ =>
+      case _                    =>
         logger.info(s"Reading latest DeltaLake version")
         reader.load(path)
     }
@@ -270,7 +270,7 @@ object ExtractMethods {
   /**
    * Resolves JDBC credentials from Vault or config.
    */
-  private def resolveJdbcCredentials(config: Map[String, Any], credentialType: String): JdbcConfig = {
+  private def resolveJdbcCredentials(config: Map[String, Any], credentialType: String): JdbcConfig =
     config.get("credentialPath") match {
       case Some(path) =>
         logger.info(s"Resolving JDBC credentials from Vault: $path")
@@ -278,10 +278,10 @@ object ExtractMethods {
         vaultClient.readSecret(path.toString) match {
           case Success(data) =>
             CredentialConfigFactory.create(credentialType, data).asInstanceOf[JdbcConfig]
-          case Failure(ex) =>
+          case Failure(ex)   =>
             throw new RuntimeException(s"Failed to read credentials from Vault: ${ex.getMessage}", ex)
         }
-      case None =>
+      case None       =>
         // Credentials provided directly in config (not recommended for production)
         logger.warn("Using credentials from config - not recommended for production")
         JdbcConfig(
@@ -293,12 +293,11 @@ object ExtractMethods {
           credentialType = credentialType,
         )
     }
-  }
 
   /**
    * Resolves S3 IAM credentials from Vault or config.
    */
-  private def resolveS3Credentials(config: Map[String, Any]): IAMConfig = {
+  private def resolveS3Credentials(config: Map[String, Any]): IAMConfig =
     config.get("credentialPath") match {
       case Some(path) =>
         logger.info(s"Resolving S3 credentials from Vault: $path")
@@ -306,10 +305,10 @@ object ExtractMethods {
         vaultClient.readSecret(path.toString) match {
           case Success(data) =>
             CredentialConfigFactory.create("s3", data).asInstanceOf[IAMConfig]
-          case Failure(ex) =>
+          case Failure(ex)   =>
             throw new RuntimeException(s"Failed to read credentials from Vault: ${ex.getMessage}", ex)
         }
-      case None =>
+      case None       =>
         logger.warn("Using S3 credentials from config - not recommended for production")
         IAMConfig(
           accessKeyId = config("accessKeyId").toString,
@@ -318,12 +317,11 @@ object ExtractMethods {
           region = config.getOrElse("region", "us-east-1").toString,
         )
     }
-  }
 
   /**
    * Resolves Kafka credentials from Vault or config.
    */
-  private def resolveKafkaCredentials(config: Map[String, Any]): OtherConfig = {
+  private def resolveKafkaCredentials(config: Map[String, Any]): OtherConfig =
     config.get("credentialPath") match {
       case Some(path) =>
         logger.info(s"Resolving Kafka credentials from Vault: $path")
@@ -331,14 +329,13 @@ object ExtractMethods {
         vaultClient.readSecret(path.toString) match {
           case Success(data) =>
             CredentialConfigFactory.create("kafka", data).asInstanceOf[OtherConfig]
-          case Failure(ex) =>
+          case Failure(ex)   =>
             throw new RuntimeException(s"Failed to read credentials from Vault: ${ex.getMessage}", ex)
         }
-      case None =>
+      case None       =>
         // Return config as-is
         OtherConfig(config.map { case (k, v) => k -> v.toString })
     }
-  }
 
   /**
    * Reads data from Avro files.

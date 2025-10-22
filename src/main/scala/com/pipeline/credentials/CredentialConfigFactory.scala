@@ -66,7 +66,7 @@ object CredentialConfigFactory {
       vaultClient: VaultClient,
       path: String,
       credentialType: String,
-  ): CredentialConfig = {
+  ): CredentialConfig =
     vaultClient.readSecret(path) match {
       case scala.util.Success(data) =>
         create(credentialType, data)
@@ -76,5 +76,4 @@ object CredentialConfigFactory {
         logger.error(message, exception)
         throw new RuntimeException(message, exception)
     }
-  }
 }

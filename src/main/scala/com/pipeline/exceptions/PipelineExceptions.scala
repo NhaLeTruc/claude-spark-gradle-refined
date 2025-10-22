@@ -48,17 +48,17 @@ class PipelineException(
   /**
    * Get sanitized config (removes credentials).
    */
-  def getSanitizedConfig: Option[Map[String, Any]] = {
+  def getSanitizedConfig: Option[Map[String, Any]] =
     config.map { cfg =>
       cfg.map {
         case (key, _) if key.toLowerCase.contains("password") => key -> "***REDACTED***"
-        case (key, _) if key.toLowerCase.contains("secret") => key -> "***REDACTED***"
-        case (key, _) if key.toLowerCase.contains("token") => key -> "***REDACTED***"
-        case (key, _) if key.toLowerCase.contains("key") && !key.toLowerCase.contains("keyspace") => key -> "***REDACTED***"
-        case (key, value) => key -> value
+        case (key, _) if key.toLowerCase.contains("secret")   => key -> "***REDACTED***"
+        case (key, _) if key.toLowerCase.contains("token")    => key -> "***REDACTED***"
+        case (key, _) if key.toLowerCase.contains("key") && !key.toLowerCase.contains("keyspace") =>
+          key -> "***REDACTED***"
+        case (key, value)                                                                         => key -> value
       }
     }
-  }
 }
 
 /**
@@ -202,7 +202,7 @@ class RetryableException(
   /**
    * Create a new exception for the next retry attempt.
    */
-  def nextAttempt: RetryableException = {
+  def nextAttempt: RetryableException =
     new RetryableException(
       message = this.message.replaceAll(s"attempt $attemptNumber", s"attempt ${attemptNumber + 1}"),
       cause = this.cause,
@@ -213,7 +213,6 @@ class RetryableException(
       stepType = stepType,
       method = method,
     )
-  }
 }
 
 /**
@@ -245,7 +244,7 @@ object PipelineException {
       validationRule: Option[String],
   ): String = {
     val ruleText = validationRule.map(r => s" Rule: $r").getOrElse("")
-    val samples = if (sampleRecords.nonEmpty) {
+    val samples  = if (sampleRecords.nonEmpty) {
       s"\nSample failed records:\n${sampleRecords.take(5).mkString("\n")}"
     } else {
       ""
@@ -270,7 +269,7 @@ object PipelineException {
       queryId: Option[String],
   ): String = {
     val nameText = queryName.map(n => s" Query: $n").getOrElse("")
-    val idText = queryId.map(i => s" (ID: $i)").getOrElse("")
+    val idText   = queryId.map(i => s" (ID: $i)").getOrElse("")
     s"$message$nameText$idText"
   }
 
@@ -285,16 +284,16 @@ object PipelineException {
   /**
    * Determine if an exception is retryable based on its type and message.
    */
-  def isRetryable(ex: Throwable): Boolean = {
+  def isRetryable(ex: Throwable): Boolean =
     ex match {
-      case _: RetryableException => true
-      case _: java.net.SocketTimeoutException => true
-      case _: java.net.ConnectException => true
+      case _: RetryableException                                                                           => true
+      case _: java.net.SocketTimeoutException                                                              => true
+      case _: java.net.ConnectException                                                                    => true
       case _: java.io.IOException if ex.getMessage != null && ex.getMessage.contains("Connection refused") => true
-      case _: org.apache.spark.sql.AnalysisException if ex.getMessage != null && ex.getMessage.contains("timeout") => true
+      case _: org.apache.spark.sql.AnalysisException if ex.getMessage != null && ex.getMessage.contains("timeout") =>
+        true
       case _ => false
     }
-  }
 
   /**
    * Wrap an exception with pipeline context.
@@ -306,7 +305,7 @@ object PipelineException {
       stepType: Option[String] = None,
       method: Option[String] = None,
       config: Option[Map[String, Any]] = None,
-  ): PipelineException = {
+  ): PipelineException =
     ex match {
       // Already a pipeline exception - preserve it
       case pe: PipelineException => pe
@@ -346,5 +345,4 @@ object PipelineException {
           config = config,
         )
     }
-  }
 }

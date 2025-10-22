@@ -29,19 +29,18 @@ object PipelineConfigParser {
    * @return Parsed PipelineConfig
    * @throws Exception if parsing fails
    */
-  def parse(json: String): PipelineConfig = {
+  def parse(json: String): PipelineConfig =
     Try {
       val rawConfig = mapper.readValue[Map[String, Any]](json)
       parseRawConfig(rawConfig)
     } match {
-      case Success(config) =>
+      case Success(config)    =>
         logger.info(s"Successfully parsed pipeline configuration: ${config.name}")
         config
       case Failure(exception) =>
         logger.error(s"Failed to parse pipeline configuration: ${exception.getMessage}")
         throw exception
     }
-  }
 
   /**
    * Parses JSON file into PipelineConfig.
@@ -61,9 +60,8 @@ object PipelineConfigParser {
    * @param config Pipeline configuration to validate
    * @throws IllegalArgumentException if configuration is invalid
    */
-  def validate(config: PipelineConfig): Unit = {
+  def validate(config: PipelineConfig): Unit =
     PipelineConfig.validate(config)
-  }
 
   /**
    * Parses raw map into PipelineConfig.
@@ -74,11 +72,9 @@ object PipelineConfigParser {
    * @return Parsed PipelineConfig
    */
   private def parseRawConfig(rawConfig: Map[String, Any]): PipelineConfig = {
-    val name = rawConfig.getOrElse("name", throw new IllegalArgumentException("Missing required field: name"))
-      .toString
+    val name = rawConfig.getOrElse("name", throw new IllegalArgumentException("Missing required field: name")).toString
 
-    val mode = rawConfig.getOrElse("mode", throw new IllegalArgumentException("Missing required field: mode"))
-      .toString
+    val mode = rawConfig.getOrElse("mode", throw new IllegalArgumentException("Missing required field: mode")).toString
 
     val stepsRaw = rawConfig.getOrElse("steps", throw new IllegalArgumentException("Missing required field: steps"))
 
@@ -87,17 +83,17 @@ object PipelineConfigParser {
         list.asScala.map {
           case stepMap: java.util.Map[_, _] =>
             parseStepConfig(stepMap.asScala.toMap.asInstanceOf[Map[String, Any]])
-          case other =>
+          case other                        =>
             throw new IllegalArgumentException(s"Invalid step format: $other")
         }.toList
-      case list: Seq[_] =>
+      case list: Seq[_]            =>
         list.map {
           case stepMap: Map[_, _] =>
             parseStepConfig(stepMap.asInstanceOf[Map[String, Any]])
-          case other =>
+          case other              =>
             throw new IllegalArgumentException(s"Invalid step format: $other")
         }.toList
-      case other =>
+      case other                   =>
         throw new IllegalArgumentException(s"Steps must be an array, got: $other")
     }
 
@@ -129,9 +125,9 @@ object PipelineConfigParser {
     val config = configRaw match {
       case javaMap: java.util.Map[_, _] =>
         convertJavaMapToScala(javaMap.asScala.toMap.asInstanceOf[Map[String, Any]])
-      case scalaMap: Map[_, _] =>
+      case scalaMap: Map[_, _]          =>
         scalaMap.asInstanceOf[Map[String, Any]]
-      case other =>
+      case other                        =>
         throw new IllegalArgumentException(s"Config must be an object, got: $other")
     }
 
@@ -146,18 +142,17 @@ object PipelineConfigParser {
    * @param map Map to convert
    * @return Converted map with Scala collections
    */
-  private def convertJavaMapToScala(map: Map[String, Any]): Map[String, Any] = {
+  private def convertJavaMapToScala(map: Map[String, Any]): Map[String, Any] =
     map.map {
       case (key, value: java.util.Map[_, _]) =>
         key -> convertJavaMapToScala(value.asScala.toMap.asInstanceOf[Map[String, Any]])
-      case (key, value: java.util.List[_]) =>
+      case (key, value: java.util.List[_])   =>
         key -> value.asScala.toList.map {
           case item: java.util.Map[_, _] =>
             convertJavaMapToScala(item.asScala.toMap.asInstanceOf[Map[String, Any]])
-          case item => item
+          case item                      => item
         }
-      case (key, value) =>
+      case (key, value)                      =>
         key -> value
     }
-  }
 }

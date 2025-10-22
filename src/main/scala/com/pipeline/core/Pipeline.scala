@@ -65,7 +65,7 @@ case class Pipeline(
    * @param stepIndex Current step index
    * @throws PipelineCancelledException if cancelled
    */
-  private def checkCancellation(stepIndex: Option[Int] = None): Unit = {
+  private def checkCancellation(stepIndex: Option[Int] = None): Unit =
     if (cancelled) {
       logger.warn(s"Pipeline cancelled at step ${stepIndex.getOrElse("unknown")}")
       throw new com.pipeline.exceptions.PipelineCancelledException(
@@ -73,7 +73,6 @@ case class Pipeline(
         cancelledAt = stepIndex,
       )
     }
-  }
 
   /**
    * Executes the pipeline with retry logic.
@@ -142,14 +141,15 @@ case class Pipeline(
 
             case _ =>
               metricsCollector.foreach(_.fail(exception.getMessage))
-              logger.error(s"Pipeline failed after $maxAttempts attempts: name=$name, mode=$mode, duration=${durationMs}ms", exception)
+              logger.error(
+                s"Pipeline failed after $maxAttempts attempts: name=$name, mode=$mode, duration=${durationMs}ms",
+                exception,
+              )
               Left(exception)
           }
       }
 
-    } finally {
-      MDC.clear()
-    }
+    } finally MDC.clear()
   }
 
   /**
@@ -184,7 +184,7 @@ case class Pipeline(
     // Initialize context with streaming mode flag
     val initialContext = PipelineContext(
       primary = Right(spark.emptyDataFrame),
-      isStreamingMode = isStreamingMode
+      isStreamingMode = isStreamingMode,
     )
 
     val resultContext = chainedSteps match {
@@ -198,7 +198,7 @@ case class Pipeline(
           stepIndex = Some(0),
           metricsCollector = metricsCollector,
         )
-      case None =>
+      case None            =>
         throw new IllegalStateException("Failed to build pipeline chain")
     }
 

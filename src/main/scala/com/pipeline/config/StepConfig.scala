@@ -29,11 +29,10 @@ object StepConfig {
    * @param stepType Step type to validate
    * @throws IllegalArgumentException if step type is invalid
    */
-  def validateStepType(stepType: String): Unit = {
+  def validateStepType(stepType: String): Unit =
     if (!ValidStepTypes.contains(stepType)) {
       throw new IllegalArgumentException(
         s"Invalid step type: '$stepType'. Must be one of: ${ValidStepTypes.mkString(", ")}",
       )
     }
-  }
 }

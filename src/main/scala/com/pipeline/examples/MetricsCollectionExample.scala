@@ -32,7 +32,7 @@ object MetricsCollectionExample {
       val configPath = "config/examples/batch-with-metrics.json"
       logger.info(s"Loading pipeline configuration from: $configPath")
 
-      val config = PipelineConfigParser.parseFile(configPath)
+      val config   = PipelineConfigParser.parseFile(configPath)
       val pipeline = Pipeline.fromConfig(config)
 
       logger.info(s"Executing pipeline: ${config.name}")
@@ -138,8 +138,8 @@ object MetricsCollectionExample {
    */
   def demonstrateMetricsAccess(spark: SparkSession): Unit = {
     val configPath = "config/examples/batch-postgres-to-s3.json"
-    val config = PipelineConfigParser.parseFile(configPath)
-    val pipeline = Pipeline.fromConfig(config)
+    val config     = PipelineConfigParser.parseFile(configPath)
+    val pipeline   = Pipeline.fromConfig(config)
 
     // Execute pipeline
     val result = pipeline.execute(spark, collectMetrics = true)

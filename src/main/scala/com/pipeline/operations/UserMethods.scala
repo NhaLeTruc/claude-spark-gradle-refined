@@ -72,18 +72,19 @@ object UserMethods {
     require(config.contains("joinConditions"), "'joinConditions' list is required")
     require(config.contains("resolvedDataFrames"), "DataFrames must be resolved by TransformStep")
 
-    val inputDfNames = config("inputDataFrames").asInstanceOf[List[String]]
+    val inputDfNames   = config("inputDataFrames").asInstanceOf[List[String]]
     val joinConditions = config("joinConditions").asInstanceOf[List[String]]
-    val joinType = config.getOrElse("joinType", "inner").toString
-    val resolvedDFs = config("resolvedDataFrames").asInstanceOf[Map[String, DataFrame]]
+    val joinType       = config.getOrElse("joinType", "inner").toString
+    val resolvedDFs    = config("resolvedDataFrames").asInstanceOf[Map[String, DataFrame]]
 
     require(inputDfNames.size >= 2, "At least 2 DataFrames required for join")
     require(joinConditions.size == inputDfNames.size - 1, "Need N-1 join conditions for N DataFrames")
 
     // Get DataFrames in order
     val dataFrames = inputDfNames.map { name =>
-      resolvedDFs.getOrElse(name,
-        throw new IllegalStateException(s"DataFrame '$name' not found in resolved DataFrames")
+      resolvedDFs.getOrElse(
+        name,
+        throw new IllegalStateException(s"DataFrame '$name' not found in resolved DataFrames"),
       )
     }
 
@@ -114,7 +115,7 @@ object UserMethods {
     require(config.contains("groupBy"), "'groupBy' columns are required")
     require(config.contains("aggregations"), "'aggregations' map is required")
 
-    val groupByCols = config("groupBy").asInstanceOf[List[String]]
+    val groupByCols  = config("groupBy").asInstanceOf[List[String]]
     val aggregations = config("aggregations").asInstanceOf[Map[String, String]]
 
     import org.apache.spark.sql.functions._
@@ -123,12 +124,12 @@ object UserMethods {
 
     val aggExprs = aggregations.map { case (columnName, aggFunc) =>
       aggFunc.toLowerCase match {
-        case "sum" => sum(col(columnName)).alias(s"${columnName}_sum")
+        case "sum"          => sum(col(columnName)).alias(s"${columnName}_sum")
         case "avg" | "mean" => avg(col(columnName)).alias(s"${columnName}_avg")
-        case "count" => count(col(columnName)).alias(s"${columnName}_count")
-        case "min" => min(col(columnName)).alias(s"${columnName}_min")
-        case "max" => max(col(columnName)).alias(s"${columnName}_max")
-        case _ => throw new IllegalArgumentException(s"Unsupported aggregation function: $aggFunc")
+        case "count"        => count(col(columnName)).alias(s"${columnName}_count")
+        case "min"          => min(col(columnName)).alias(s"${columnName}_min")
+        case "max"          => max(col(columnName)).alias(s"${columnName}_max")
+        case _              => throw new IllegalArgumentException(s"Unsupported aggregation function: $aggFunc")
       }
     }.toSeq
 
@@ -155,9 +156,9 @@ object UserMethods {
         require(config.contains("pivotColumn"), "'pivotColumn' is required for pivot")
         require(config.contains("groupByColumns"), "'groupByColumns' is required for pivot")
 
-        val pivotCol = config("pivotColumn").toString
+        val pivotCol    = config("pivotColumn").toString
         val groupByCols = config("groupByColumns").asInstanceOf[List[String]]
-        val aggColumn = config.get("aggregateColumn").map(_.toString)
+        val aggColumn   = config.get("aggregateColumn").map(_.toString)
 
         import org.apache.spark.sql.functions._
 
@@ -166,7 +167,7 @@ object UserMethods {
 
         aggColumn match {
           case Some(aggCol) => pivoted.agg(sum(col(aggCol)))
-          case None => pivoted.count()
+          case None         => pivoted.count()
         }
 
       case "unpivot" =>
@@ -174,22 +175,25 @@ object UserMethods {
         require(config.contains("variableColName"), "'variableColName' is required for unpivot")
         require(config.contains("valueColName"), "'valueColName' is required for unpivot")
 
-        val valueCols = config("valueCols").asInstanceOf[List[String]]
+        val valueCols       = config("valueCols").asInstanceOf[List[String]]
         val variableColName = config("variableColName").toString
-        val valueColName = config("valueColName").toString
-        val idCols = config.get("idCols").map(_.asInstanceOf[List[String]]).getOrElse(
-          df.columns.filterNot(valueCols.contains).toList
-        )
+        val valueColName    = config("valueColName").toString
+        val idCols          = config
+          .get("idCols")
+          .map(_.asInstanceOf[List[String]])
+          .getOrElse(
+            df.columns.filterNot(valueCols.contains).toList,
+          )
 
         import org.apache.spark.sql.functions._
 
         // Build stack expression: stack(n, 'col1', col1, 'col2', col2, ...)
         val stackExpr = valueCols.map(col => s"'$col', `$col`").mkString(", ")
-        val numCols = valueCols.length
+        val numCols   = valueCols.length
 
         // Select id columns plus the unpivoted columns
         val selectCols = idCols.mkString(", ") match {
-          case "" => s"stack($numCols, $stackExpr) as ($variableColName, $valueColName)"
+          case ""  => s"stack($numCols, $stackExpr) as ($variableColName, $valueColName)"
           case ids => s"$ids, stack($numCols, $stackExpr) as ($variableColName, $valueColName)"
         }
 
@@ -216,13 +220,14 @@ object UserMethods {
     require(config.contains("resolvedDataFrames"), "DataFrames must be resolved by TransformStep")
 
     val inputDfNames = config("inputDataFrames").asInstanceOf[List[String]]
-    val distinct = config.getOrElse("distinct", false).asInstanceOf[Boolean]
-    val resolvedDFs = config("resolvedDataFrames").asInstanceOf[Map[String, DataFrame]]
+    val distinct     = config.getOrElse("distinct", false).asInstanceOf[Boolean]
+    val resolvedDFs  = config("resolvedDataFrames").asInstanceOf[Map[String, DataFrame]]
 
     // Get DataFrames to union
     val dataFrames = inputDfNames.map { name =>
-      resolvedDFs.getOrElse(name,
-        throw new IllegalStateException(s"DataFrame '$name' not found in resolved DataFrames")
+      resolvedDFs.getOrElse(
+        name,
+        throw new IllegalStateException(s"DataFrame '$name' not found in resolved DataFrames"),
       )
     }
 
@@ -259,7 +264,7 @@ object UserMethods {
     require(config.contains("expectedColumns"), "'expectedColumns' is required")
 
     val expectedColumns = config("expectedColumns").asInstanceOf[List[Map[String, String]]]
-    val actualSchema = df.schema
+    val actualSchema    = df.schema
 
     expectedColumns.foreach { colSpec =>
       val colName = colSpec("name")
@@ -267,13 +272,13 @@ object UserMethods {
 
       val actualField = actualSchema.fields.find(_.name == colName)
       actualField match {
-        case None =>
+        case None                                                              =>
           throw new IllegalStateException(s"Schema validation failed: Column '$colName' not found")
         case Some(field) if !field.dataType.typeName.equalsIgnoreCase(colType) =>
           throw new IllegalStateException(
-            s"Schema validation failed: Column '$colName' has type '${field.dataType.typeName}' but expected '$colType'"
+            s"Schema validation failed: Column '$colName' has type '${field.dataType.typeName}' but expected '$colType'",
           )
-        case Some(_) =>
+        case Some(_)                                                           =>
           logger.debug(s"Column '$colName' validation passed")
       }
     }
@@ -301,7 +306,7 @@ object UserMethods {
       val nullCount = df.filter(col(colName).isNull).count()
       if (nullCount > 0) {
         throw new IllegalStateException(
-          s"Null validation failed: Column '$colName' has $nullCount null values"
+          s"Null validation failed: Column '$colName' has $nullCount null values",
         )
       }
       logger.debug(s"Column '$colName' has no null values")
@@ -336,7 +341,7 @@ object UserMethods {
         val violationCount = df.filter(col(colName) < lit(min)).count()
         if (violationCount > 0) {
           throw new IllegalStateException(
-            s"Range validation failed: Column '$colName' has $violationCount values below minimum $min"
+            s"Range validation failed: Column '$colName' has $violationCount values below minimum $min",
           )
         }
       }
@@ -345,7 +350,7 @@ object UserMethods {
         val violationCount = df.filter(col(colName) > lit(max)).count()
         if (violationCount > 0) {
           throw new IllegalStateException(
-            s"Range validation failed: Column '$colName' has $violationCount values above maximum $max"
+            s"Range validation failed: Column '$colName' has $violationCount values above maximum $max",
           )
         }
       }
@@ -371,22 +376,22 @@ object UserMethods {
     require(config.contains("referencedColumn"), "'referencedColumn' is required")
     require(config.contains("resolvedReferencedDataFrame"), "Referenced DataFrame must be resolved by ValidateStep")
 
-    val foreignKey = config("foreignKey").toString
+    val foreignKey       = config("foreignKey").toString
     val referencedDfName = config("referencedDataFrame").toString
     val referencedColumn = config("referencedColumn").toString
-    val referencedDf = config("resolvedReferencedDataFrame").asInstanceOf[DataFrame]
+    val referencedDf     = config("resolvedReferencedDataFrame").asInstanceOf[DataFrame]
 
     import org.apache.spark.sql.functions._
 
     // Find foreign key values that don't exist in referenced column
     val orphanedRecords = df
       .select(col(foreignKey))
-      .filter(col(foreignKey).isNotNull)  // Only check non-null foreign keys
+      .filter(col(foreignKey).isNotNull) // Only check non-null foreign keys
       .distinct()
       .join(
         referencedDf.select(col(referencedColumn)).distinct(),
         df(foreignKey) === referencedDf(referencedColumn),
-        "left_anti"  // Find values in left that don't exist in right
+        "left_anti", // Find values in left that don't exist in right
       )
 
     val violationCount = orphanedRecords.count()
@@ -396,7 +401,7 @@ object UserMethods {
       val sample = orphanedRecords.take(5).map(_.get(0)).mkString(", ")
       throw new IllegalStateException(
         s"Referential integrity validation failed: $violationCount orphaned records in '$foreignKey' " +
-        s"not found in '$referencedDfName.$referencedColumn'. Sample values: $sample"
+          s"not found in '$referencedDfName.$referencedColumn'. Sample values: $sample",
       )
     }
 
@@ -421,7 +426,7 @@ object UserMethods {
       val violationCount = df.filter(s"NOT ($rule)").count()
       if (violationCount > 0) {
         throw new IllegalStateException(
-          s"Business rule validation failed: Rule #${index + 1} '$rule' violated by $violationCount rows"
+          s"Business rule validation failed: Rule #${index + 1} '$rule' violated by $violationCount rows",
         )
       }
       logger.debug(s"Business rule #${index + 1} passed: $rule")
@@ -444,7 +449,7 @@ object UserMethods {
     logger.info("Converting DataFrame schema to Avro schema")
 
     val namespace = config.getOrElse("namespace", "com.pipeline").toString
-    val name = config.getOrElse("name", "Record").toString
+    val name      = config.getOrElse("name", "Record").toString
 
     val avroSchema = AvroConverter.dataFrameToAvroSchema(df, namespace, name)
 
@@ -484,9 +489,9 @@ object UserMethods {
     require(config.contains("numPartitions"), "'numPartitions' is required")
 
     val numPartitions = config("numPartitions") match {
-      case n: Int => n
+      case n: Int    => n
       case n: String => n.toInt
-      case n => n.toString.toInt
+      case n         => n.toString.toInt
     }
 
     logger.info(s"Repartitioning to $numPartitions partitions")
@@ -508,22 +513,24 @@ object UserMethods {
 
     val columns = config("columns") match {
       case list: List[_] => list.map(_.toString)
-      case col: String => List(col)
-      case _ => throw new IllegalArgumentException("'columns' must be a List or String")
+      case col: String   => List(col)
+      case _             => throw new IllegalArgumentException("'columns' must be a List or String")
     }
 
     val numPartitions = config.get("numPartitions").map {
-      case n: Int => n
+      case n: Int    => n
       case n: String => n.toInt
-      case n => n.toString.toInt
+      case n         => n.toString.toInt
     }
 
-    logger.info(s"Repartitioning by columns: ${columns.mkString(", ")}" +
-      numPartitions.map(n => s" into $n partitions").getOrElse(""))
+    logger.info(
+      s"Repartitioning by columns: ${columns.mkString(", ")}" +
+        numPartitions.map(n => s" into $n partitions").getOrElse(""),
+    )
 
     numPartitions match {
       case Some(n) => df.repartition(n, columns.map(df(_)): _*)
-      case None => df.repartition(columns.map(df(_)): _*)
+      case None    => df.repartition(columns.map(df(_)): _*)
     }
   }
 
@@ -541,9 +548,9 @@ object UserMethods {
     require(config.contains("numPartitions"), "'numPartitions' is required")
 
     val numPartitions = config("numPartitions") match {
-      case n: Int => n
+      case n: Int    => n
       case n: String => n.toInt
-      case n => n.toString.toInt
+      case n         => n.toString.toInt
     }
 
     logger.info(s"Coalescing to $numPartitions partitions")
