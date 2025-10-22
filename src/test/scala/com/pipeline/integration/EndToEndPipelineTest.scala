@@ -37,10 +37,10 @@ class EndToEndPipelineTest extends IntegrationTestBase {
     insertTestData(
       "users_source",
       Seq(
-        Map("id" -> 1, "name" -> "Alice", "email" -> "alice@example.com", "age" -> 30, "status" -> "active"),
-        Map("id" -> 2, "name" -> "Bob", "email" -> "bob@example.com", "age" -> 25, "status" -> "active"),
+        Map("id" -> 1, "name" -> "Alice", "email"   -> "alice@example.com", "age"   -> 30, "status" -> "active"),
+        Map("id" -> 2, "name" -> "Bob", "email"     -> "bob@example.com", "age"     -> 25, "status" -> "active"),
         Map("id" -> 3, "name" -> "Charlie", "email" -> "charlie@example.com", "age" -> 35, "status" -> "inactive"),
-        Map("id" -> 4, "name" -> "Diana", "email" -> "diana@example.com", "age" -> 28, "status" -> "active"),
+        Map("id" -> 4, "name" -> "Diana", "email"   -> "diana@example.com", "age"   -> 28, "status" -> "active"),
       ),
     )
 
@@ -66,7 +66,7 @@ class EndToEndPipelineTest extends IntegrationTestBase {
     )
 
     // Create pipeline
-    val props = getPostgresProperties
+    val props    = getPostgresProperties
     val pipeline = Pipeline(
       name = "e2e-test-pipeline",
       mode = "batch",
@@ -74,12 +74,12 @@ class EndToEndPipelineTest extends IntegrationTestBase {
         ExtractStep(
           method = "fromPostgres",
           config = Map(
-            "host" -> props("host"),
-            "port" -> props("port"),
+            "host"     -> props("host"),
+            "port"     -> props("port"),
             "database" -> props("database"),
             "username" -> props("username"),
             "password" -> props("password"),
-            "table" -> "users_source",
+            "table"    -> "users_source",
           ),
           nextStep = None,
         ),
@@ -102,13 +102,13 @@ class EndToEndPipelineTest extends IntegrationTestBase {
         LoadStep(
           method = "toPostgres",
           config = Map(
-            "host" -> props("host"),
-            "port" -> props("port"),
+            "host"     -> props("host"),
+            "port"     -> props("port"),
             "database" -> props("database"),
             "username" -> props("username"),
             "password" -> props("password"),
-            "table" -> "users_processed",
-            "mode" -> "overwrite",
+            "table"    -> "users_processed",
+            "mode"     -> "overwrite",
           ),
           nextStep = None,
         ),
@@ -131,7 +131,7 @@ class EndToEndPipelineTest extends IntegrationTestBase {
           .option("password", postgresContainer.getPassword)
           .load()
 
-        resultDf.count() shouldBe 3 // Only active users
+        resultDf.count() shouldBe 3                          // Only active users
         resultDf.filter(col("age") >= 18).count() shouldBe 3 // All adults
         resultDf.filter(col("is_adult") === true).count() shouldBe 3
 
@@ -153,12 +153,12 @@ class EndToEndPipelineTest extends IntegrationTestBase {
         ExtractStep(
           method = "fromPostgres",
           config = Map(
-            "host" -> "invalid-host",
-            "port" -> "5432",
+            "host"     -> "invalid-host",
+            "port"     -> "5432",
             "database" -> "testdb",
             "username" -> "user",
             "password" -> "pass",
-            "table" -> "nonexistent_table",
+            "table"    -> "nonexistent_table",
           ),
           nextStep = None,
         ),
@@ -196,7 +196,7 @@ class EndToEndPipelineTest extends IntegrationTestBase {
     )
 
     // Create pipeline
-    val props = getPostgresProperties
+    val props    = getPostgresProperties
     val pipeline = Pipeline(
       name = "metrics-test-pipeline",
       mode = "batch",
@@ -204,12 +204,12 @@ class EndToEndPipelineTest extends IntegrationTestBase {
         ExtractStep(
           method = "fromPostgres",
           config = Map(
-            "host" -> props("host"),
-            "port" -> props("port"),
+            "host"     -> props("host"),
+            "port"     -> props("port"),
             "database" -> props("database"),
             "username" -> props("username"),
             "password" -> props("password"),
-            "table" -> "metrics_test",
+            "table"    -> "metrics_test",
           ),
           nextStep = None,
         ),
@@ -257,7 +257,7 @@ class EndToEndPipelineTest extends IntegrationTestBase {
     )
 
     // Create pipeline with caching
-    val props = getPostgresProperties
+    val props    = getPostgresProperties
     val pipeline = Pipeline(
       name = "cache-test-pipeline",
       mode = "batch",
@@ -265,13 +265,13 @@ class EndToEndPipelineTest extends IntegrationTestBase {
         ExtractStep(
           method = "fromPostgres",
           config = Map(
-            "host" -> props("host"),
-            "port" -> props("port"),
-            "database" -> props("database"),
-            "username" -> props("username"),
-            "password" -> props("password"),
-            "table" -> "cache_test",
-            "cache" -> true,
+            "host"              -> props("host"),
+            "port"              -> props("port"),
+            "database"          -> props("database"),
+            "username"          -> props("username"),
+            "password"          -> props("password"),
+            "table"             -> "cache_test",
+            "cache"             -> true,
             "cacheStorageLevel" -> "MEMORY_ONLY",
           ),
           nextStep = None,
@@ -309,7 +309,7 @@ class EndToEndPipelineTest extends IntegrationTestBase {
     )
 
     // Create pipeline with repartitioning
-    val props = getPostgresProperties
+    val props    = getPostgresProperties
     val pipeline = Pipeline(
       name = "repartition-test-pipeline",
       mode = "batch",
@@ -317,12 +317,12 @@ class EndToEndPipelineTest extends IntegrationTestBase {
         ExtractStep(
           method = "fromPostgres",
           config = Map(
-            "host" -> props("host"),
-            "port" -> props("port"),
+            "host"     -> props("host"),
+            "port"     -> props("port"),
             "database" -> props("database"),
             "username" -> props("username"),
             "password" -> props("password"),
-            "table" -> "repartition_test",
+            "table"    -> "repartition_test",
           ),
           nextStep = None,
         ),

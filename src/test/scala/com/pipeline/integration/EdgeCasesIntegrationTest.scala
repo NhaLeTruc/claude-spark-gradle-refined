@@ -27,9 +27,9 @@ class EdgeCasesIntegrationTest extends IntegrationTestBase {
     // Insert 10,000 rows
     val largeData = (1 to 10000).map { i =>
       Map(
-        "id" -> i,
+        "id"       -> i,
         "category" -> s"cat_${i % 100}",
-        "value" -> (Math.random() * 1000).toDouble,
+        "value"    -> (Math.random() * 1000).toDouble,
       )
     }
 
@@ -41,7 +41,7 @@ class EdgeCasesIntegrationTest extends IntegrationTestBase {
     )
 
     // Create pipeline to process large dataset
-    val props = getPostgresProperties
+    val props    = getPostgresProperties
     val pipeline = Pipeline(
       name = "large-dataset-pipeline",
       mode = "batch",
@@ -49,26 +49,26 @@ class EdgeCasesIntegrationTest extends IntegrationTestBase {
         ExtractStep(
           method = "fromPostgres",
           config = Map(
-            "host" -> props("host"),
-            "port" -> props("port"),
-            "database" -> props("database"),
-            "username" -> props("username"),
-            "password" -> props("password"),
-            "table" -> "large_dataset",
+            "host"            -> props("host"),
+            "port"            -> props("port"),
+            "database"        -> props("database"),
+            "username"        -> props("username"),
+            "password"        -> props("password"),
+            "table"           -> "large_dataset",
             "partitionColumn" -> "id",
-            "lowerBound" -> "1",
-            "upperBound" -> "10000",
-            "numPartitions" -> "4",
+            "lowerBound"      -> "1",
+            "upperBound"      -> "10000",
+            "numPartitions"   -> "4",
           ),
           nextStep = None,
         ),
         TransformStep(
           method = "aggregateData",
           config = Map(
-            "groupBy" -> List("category"),
+            "groupBy"      -> List("category"),
             "aggregations" -> Map(
               "value" -> "avg",
-              "id" -> "count",
+              "id"    -> "count",
             ),
           ),
           nextStep = None,
@@ -76,13 +76,13 @@ class EdgeCasesIntegrationTest extends IntegrationTestBase {
         LoadStep(
           method = "toPostgres",
           config = Map(
-            "host" -> props("host"),
-            "port" -> props("port"),
+            "host"     -> props("host"),
+            "port"     -> props("port"),
             "database" -> props("database"),
             "username" -> props("username"),
             "password" -> props("password"),
-            "table" -> "large_result",
-            "mode" -> "overwrite",
+            "table"    -> "large_result",
+            "mode"     -> "overwrite",
           ),
           nextStep = None,
         ),
@@ -91,8 +91,8 @@ class EdgeCasesIntegrationTest extends IntegrationTestBase {
 
     // Execute with timing
     val startTime = System.currentTimeMillis()
-    val result = pipeline.execute(spark, collectMetrics = true)
-    val endTime = System.currentTimeMillis()
+    val result    = pipeline.execute(spark, collectMetrics = true)
+    val endTime   = System.currentTimeMillis()
 
     result match {
       case Right(_) =>
@@ -141,7 +141,7 @@ class EdgeCasesIntegrationTest extends IntegrationTestBase {
     )
 
     // Create pipeline
-    val props = getPostgresProperties
+    val props    = getPostgresProperties
     val pipeline = Pipeline(
       name = "cancellation-test-pipeline",
       mode = "batch",
@@ -149,12 +149,12 @@ class EdgeCasesIntegrationTest extends IntegrationTestBase {
         ExtractStep(
           method = "fromPostgres",
           config = Map(
-            "host" -> props("host"),
-            "port" -> props("port"),
+            "host"     -> props("host"),
+            "port"     -> props("port"),
             "database" -> props("database"),
             "username" -> props("username"),
             "password" -> props("password"),
-            "table" -> "cancellation_test",
+            "table"    -> "cancellation_test",
           ),
           nextStep = None,
         ),
@@ -164,17 +164,16 @@ class EdgeCasesIntegrationTest extends IntegrationTestBase {
     // Cancel pipeline immediately
     pipeline.cancel()
 
-    // Try to execute cancelled pipeline
-    val result = pipeline.execute(spark)
-
-    result match {
-      case Left(exception) =>
-        logger.info(s"Cancelled pipeline failed as expected: ${exception.getMessage}")
-        exception.getMessage should include("cancel")
-
-      case Right(_) =>
-        fail("Cancelled pipeline should not execute")
+    // Try to execute cancelled pipeline - should throw exception
+    val exception = intercept[com.pipeline.exceptions.PipelineCancelledException] {
+      pipeline.execute(spark) match {
+        case Left(ex)  => throw ex
+        case Right(_) => ()
+      }
     }
+
+    logger.info(s"Cancelled pipeline failed as expected: ${exception.getMessage}")
+    exception.getMessage should include("cancel")
   }
 
   it should "retry on transient failures" in {
@@ -194,12 +193,12 @@ class EdgeCasesIntegrationTest extends IntegrationTestBase {
         ExtractStep(
           method = "fromPostgres",
           config = Map(
-            "host" -> props("host"),
-            "port" -> props("port"), // Correct port
+            "host"     -> props("host"),
+            "port"     -> props("port"), // Correct port
             "database" -> props("database"),
             "username" -> props("username"),
             "password" -> props("password"),
-            "table" -> "retry_test_table",
+            "table"    -> "retry_test_table",
           ),
           nextStep = None,
         ),
@@ -264,12 +263,12 @@ class EdgeCasesIntegrationTest extends IntegrationTestBase {
         ExtractStep(
           method = "fromPostgres",
           config = Map(
-            "host" -> props("host"),
-            "port" -> props("port"),
+            "host"     -> props("host"),
+            "port"     -> props("port"),
             "database" -> props("database"),
             "username" -> props("username"),
             "password" -> props("password"),
-            "table" -> "concurrent_source",
+            "table"    -> "concurrent_source",
           ),
           nextStep = None,
         ),
@@ -281,13 +280,13 @@ class EdgeCasesIntegrationTest extends IntegrationTestBase {
         LoadStep(
           method = "toPostgres",
           config = Map(
-            "host" -> props("host"),
-            "port" -> props("port"),
+            "host"     -> props("host"),
+            "port"     -> props("port"),
             "database" -> props("database"),
             "username" -> props("username"),
             "password" -> props("password"),
-            "table" -> "concurrent_dest_1",
-            "mode" -> "overwrite",
+            "table"    -> "concurrent_dest_1",
+            "mode"     -> "overwrite",
           ),
           nextStep = None,
         ),
@@ -301,12 +300,12 @@ class EdgeCasesIntegrationTest extends IntegrationTestBase {
         ExtractStep(
           method = "fromPostgres",
           config = Map(
-            "host" -> props("host"),
-            "port" -> props("port"),
+            "host"     -> props("host"),
+            "port"     -> props("port"),
             "database" -> props("database"),
             "username" -> props("username"),
             "password" -> props("password"),
-            "table" -> "concurrent_source",
+            "table"    -> "concurrent_source",
           ),
           nextStep = None,
         ),
@@ -318,13 +317,13 @@ class EdgeCasesIntegrationTest extends IntegrationTestBase {
         LoadStep(
           method = "toPostgres",
           config = Map(
-            "host" -> props("host"),
-            "port" -> props("port"),
+            "host"     -> props("host"),
+            "port"     -> props("port"),
             "database" -> props("database"),
             "username" -> props("username"),
             "password" -> props("password"),
-            "table" -> "concurrent_dest_2",
-            "mode" -> "overwrite",
+            "table"    -> "concurrent_dest_2",
+            "mode"     -> "overwrite",
           ),
           nextStep = None,
         ),
@@ -335,8 +334,8 @@ class EdgeCasesIntegrationTest extends IntegrationTestBase {
     import scala.concurrent.Future
     import scala.concurrent.ExecutionContext.Implicits.global
 
-    val future1 = Future { pipeline1.execute(spark) }
-    val future2 = Future { pipeline2.execute(spark) }
+    val future1 = Future(pipeline1.execute(spark))
+    val future2 = Future(pipeline2.execute(spark))
 
     import scala.concurrent.Await
     import scala.concurrent.duration._
@@ -393,7 +392,7 @@ class EdgeCasesIntegrationTest extends IntegrationTestBase {
     )
 
     // Create pipeline
-    val props = getPostgresProperties
+    val props    = getPostgresProperties
     val pipeline = Pipeline(
       name = "unicode-test-pipeline",
       mode = "batch",
@@ -401,12 +400,12 @@ class EdgeCasesIntegrationTest extends IntegrationTestBase {
         ExtractStep(
           method = "fromPostgres",
           config = Map(
-            "host" -> props("host"),
-            "port" -> props("port"),
+            "host"     -> props("host"),
+            "port"     -> props("port"),
             "database" -> props("database"),
             "username" -> props("username"),
             "password" -> props("password"),
-            "table" -> "unicode_test",
+            "table"    -> "unicode_test",
           ),
           nextStep = None,
         ),
