@@ -2,9 +2,11 @@ package com.pipeline.unit.operations
 
 import com.pipeline.core.{ExtractStep, LoadStep, Pipeline, TransformStep}
 import org.apache.spark.sql.SparkSession
+import org.junit.runner.RunWith
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import org.scalatestplus.junit.JUnitRunner
 
 /**
  * Test suite for streaming mode detection and execution.
@@ -15,7 +17,7 @@ import org.scalatest.matchers.should.Matchers
  * - Mode detection during execution
  * - Streaming vs batch behavior differences
  */
-// @RunWith(classOf[JUnitRunner])
+@RunWith(classOf[JUnitRunner])
 class StreamingModeTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
 
   private var spark: SparkSession = _

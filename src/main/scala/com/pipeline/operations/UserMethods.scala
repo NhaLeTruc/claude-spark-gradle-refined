@@ -80,21 +80,38 @@ object UserMethods {
     require(inputDfNames.size >= 2, "At least 2 DataFrames required for join")
     require(joinConditions.size == inputDfNames.size - 1, "Need N-1 join conditions for N DataFrames")
 
-    // Get DataFrames in order
+    // Get DataFrames in order and alias them with their names for qualified column references
     val dataFrames = inputDfNames.map { name =>
-      resolvedDFs.getOrElse(
+      val df = resolvedDFs.getOrElse(
         name,
         throw new IllegalStateException(s"DataFrame '$name' not found in resolved DataFrames"),
       )
+      df.alias(name) // Alias DataFrame with its registration name
     }
 
     import org.apache.spark.sql.functions.expr
 
     // Perform sequential joins
     var result = dataFrames.head
-    dataFrames.tail.zip(joinConditions).foreach { case (rightDf, condition) =>
+    dataFrames.tail.zip(joinConditions).zip(inputDfNames.tail).foreach { case ((rightDf, condition), rightName) =>
       logger.info(s"Joining with condition: $condition (type: $joinType)")
-      result = result.join(rightDf, expr(condition), joinType)
+
+      // Perform the join first
+      val joined = result.join(rightDf, expr(condition), joinType)
+
+      // Extract join keys from condition to identify duplicate columns to drop
+      // Parse condition like "users.user_id = orders.user_id" to identify common columns
+      val joinKeysPattern = """(\w+)\.(\w+)\s*=\s*(\w+)\.(\w+)""".r
+      result = condition match {
+        case joinKeysPattern(leftAlias, leftKey, rightAlias, rightKey) if leftKey == rightKey =>
+          // After join, drop the duplicate key column from the right side to avoid conflicts
+          // The joined DataFrame will have both columns, so we need to drop the one from right
+          logger.debug(s"Dropping duplicate column from right side ($rightAlias.$rightKey) to avoid conflicts")
+          // Drop column using qualified name since both sides have it after join
+          joined.drop(rightDf(rightKey))
+        case _ =>
+          joined
+      }
     }
 
     logger.info(s"Successfully joined ${inputDfNames.size} DataFrames")

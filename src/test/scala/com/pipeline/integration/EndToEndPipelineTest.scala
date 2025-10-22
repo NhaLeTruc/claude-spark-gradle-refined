@@ -3,6 +3,8 @@ package com.pipeline.integration
 import com.pipeline.config.PipelineConfigParser
 import com.pipeline.core.{ExtractStep, LoadStep, Pipeline, TransformStep}
 import org.apache.spark.sql.functions._
+import org.junit.runner.RunWith
+import org.scalatestplus.junit.JUnitRunner
 
 /**
  * End-to-end integration tests for complete pipeline execution.
@@ -10,7 +12,7 @@ import org.apache.spark.sql.functions._
  * Tests the full pipeline workflow from extract to load with real containers.
  * Implements Sprint 1-2 Task 1.2: Integration Testing Suite.
  */
-// @RunWith(classOf[JUnitRunner])
+@RunWith(classOf[JUnitRunner])
 class EndToEndPipelineTest extends IntegrationTestBase {
 
   behavior of "End-to-End Pipeline"

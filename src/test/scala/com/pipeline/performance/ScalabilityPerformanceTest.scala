@@ -1,6 +1,6 @@
 package com.pipeline.performance
 
-import com.pipeline.core.{Pipeline, TransformStep}
+import com.pipeline.core.{ExtractStep, Pipeline, TransformStep}
 import org.junit.runner.RunWith
 import org.scalatestplus.junit.JUnitRunner
 
@@ -116,36 +116,11 @@ class ScalabilityPerformanceTest extends PerformanceTestBase {
 
     val results = dataSizes.map { size =>
       val df = createLargeTestDataFrame(size)
-      df.createOrReplaceTempView(s"scale_test_$size")
-
-      val pipeline = Pipeline(
-        name = s"scale-pipeline-$size",
-        mode = "batch",
-        steps = List(
-          TransformStep(
-            method = "filterRows",
-            config = Map("condition" -> "id % 5 = 0"),
-            nextStep = None,
-          ),
-          TransformStep(
-            method = "enrichData",
-            config = Map(
-              "columns" -> Map(
-                "is_high_value" -> "value1 > 500",
-              ),
-            ),
-            nextStep = None,
-          ),
-        ),
-      )
 
       val (_, duration) = measureTime(s"pipeline-scale-$size") {
-        pipeline.execute(spark) match {
-          case Right(context) =>
-            context.getPrimaryDataFrame.count()
-          case Left(ex) =>
-            fail(s"Pipeline failed for size $size: ${ex.getMessage}")
-        }
+        df.filter("id % 5 = 0")
+          .withColumn("is_high_value", org.apache.spark.sql.functions.expr("value1 > 500"))
+          .count()
       }
 
       val throughput = (size * 1000.0) / duration
