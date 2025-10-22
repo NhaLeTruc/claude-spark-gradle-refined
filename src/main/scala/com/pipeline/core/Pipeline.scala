@@ -5,7 +5,7 @@ import com.pipeline.retry.RetryStrategy
 import org.apache.spark.sql.SparkSession
 import org.slf4j.{Logger, LoggerFactory, MDC}
 
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 /**
  * Pipeline orchestrator that executes a chain of steps.
@@ -112,7 +112,7 @@ case class Pipeline(
 
       // Execute with retry
       val result = RetryStrategy.executeWithRetry(
-        operation = () => Success(executeSteps(spark)),
+        operation = () => Try(executeSteps(spark)),
         maxAttempts = maxAttempts,
         delayMillis = delayMillis,
       )

@@ -141,7 +141,7 @@ class ValidationIntegrationTest extends IntegrationTestBase {
     result match {
       case Left(exception) =>
         logger.info(s"Null validation failed as expected: ${exception.getMessage}")
-        exception.getMessage should include("null")
+        exception.getMessage.toLowerCase should include("null")
 
       case Right(_) =>
         fail("Pipeline should have failed due to null values")
@@ -324,7 +324,7 @@ class ValidationIntegrationTest extends IntegrationTestBase {
     result match {
       case Left(exception) =>
         logger.info(s"Business rules validation failed as expected: ${exception.getMessage}")
-        exception.getMessage should include("discount")
+        exception.getMessage.toLowerCase should include("discount")
 
       case Right(_) =>
         fail("Pipeline should have failed due to business rule violations")
