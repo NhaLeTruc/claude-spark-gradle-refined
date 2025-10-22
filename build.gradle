@@ -111,9 +111,20 @@ application {
     mainClass = 'com.pipeline.cli.PipelineRunner'
 }
 
-// Standard JAR (includes Spark for local CLI execution)
+// Standard FAT JAR (includes ALL dependencies including Spark for local CLI execution)
 jar {
     archiveBaseName = 'pipeline-app'
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    zip64 = true  // Enable zip64 for large archives
+
+    // Handle duplicate files
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+
     manifest {
         attributes(
             'Main-Class': 'com.pipeline.cli.PipelineRunner',
