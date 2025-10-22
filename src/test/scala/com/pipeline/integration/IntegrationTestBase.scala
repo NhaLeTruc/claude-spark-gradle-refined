@@ -23,7 +23,7 @@ trait IntegrationTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterA
 
   // Testcontainers
   protected var postgresContainer: PostgreSQLContainer[_] = _
-  protected var vaultContainer: GenericContainer[_] = _
+  protected var vaultContainer: GenericContainer[_]       = _
 
   /**
    * Sets up Spark and containers before all tests.
@@ -86,11 +86,11 @@ trait IntegrationTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterA
   /**
    * Starts PostgreSQL container for testing.
    */
-  private def startPostgresContainer(): Unit = {
+  private def startPostgresContainer(): Unit =
     try {
       logger.info("Starting PostgreSQL container...")
       postgresContainer = new PostgreSQLContainer(
-        DockerImageName.parse("postgres:15-alpine")
+        DockerImageName.parse("postgres:15-alpine"),
       )
       postgresContainer.withDatabaseName("testdb")
       postgresContainer.withUsername("testuser")
@@ -103,12 +103,11 @@ trait IntegrationTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterA
         logger.warn(s"Could not start PostgreSQL container: ${ex.getMessage}")
         logger.warn("Integration tests requiring PostgreSQL will be skipped")
     }
-  }
 
   /**
    * Starts Vault container for testing.
    */
-  private def startVaultContainer(): Unit = {
+  private def startVaultContainer(): Unit =
     try {
       logger.info("Starting Vault container...")
       vaultContainer = new GenericContainer(DockerImageName.parse("hashicorp/vault:1.15"))
@@ -129,12 +128,11 @@ trait IntegrationTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterA
         logger.warn(s"Could not start Vault container: ${ex.getMessage}")
         logger.warn("Integration tests requiring Vault will be skipped")
     }
-  }
 
   /**
    * Stops PostgreSQL container.
    */
-  private def stopPostgresContainer(): Unit = {
+  private def stopPostgresContainer(): Unit =
     if (postgresContainer != null) {
       try {
         postgresContainer.stop()
@@ -144,12 +142,11 @@ trait IntegrationTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterA
           logger.warn(s"Error stopping PostgreSQL container: ${ex.getMessage}")
       }
     }
-  }
 
   /**
    * Stops Vault container.
    */
-  private def stopVaultContainer(): Unit = {
+  private def stopVaultContainer(): Unit =
     if (vaultContainer != null) {
       try {
         vaultContainer.stop()
@@ -159,7 +156,6 @@ trait IntegrationTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterA
           logger.warn(s"Error stopping Vault container: ${ex.getMessage}")
       }
     }
-  }
 
   /**
    * Cleans up test data between tests.
@@ -198,22 +194,21 @@ trait IntegrationTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterA
   /**
    * Gets PostgreSQL JDBC URL for tests.
    */
-  protected def getPostgresJdbcUrl: String = {
+  protected def getPostgresJdbcUrl: String =
     if (postgresContainer != null && postgresContainer.isRunning) {
       postgresContainer.getJdbcUrl
     } else {
       throw new IllegalStateException("PostgreSQL container is not running")
     }
-  }
 
   /**
    * Gets PostgreSQL connection properties.
    */
-  protected def getPostgresProperties: Map[String, Any] = {
+  protected def getPostgresProperties: Map[String, Any] =
     if (postgresContainer != null && postgresContainer.isRunning) {
       Map(
-        "host" -> postgresContainer.getHost,
-        "port" -> postgresContainer.getMappedPort(5432).toString,
+        "host"     -> postgresContainer.getHost,
+        "port"     -> postgresContainer.getMappedPort(5432).toString,
         "database" -> postgresContainer.getDatabaseName,
         "username" -> postgresContainer.getUsername,
         "password" -> postgresContainer.getPassword,
@@ -221,18 +216,16 @@ trait IntegrationTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterA
     } else {
       throw new IllegalStateException("PostgreSQL container is not running")
     }
-  }
 
   /**
    * Gets Vault address for tests.
    */
-  protected def getVaultAddress: String = {
+  protected def getVaultAddress: String =
     if (vaultContainer != null && vaultContainer.isRunning) {
       s"http://${vaultContainer.getHost}:${vaultContainer.getMappedPort(8200)}"
     } else {
       throw new IllegalStateException("Vault container is not running")
     }
-  }
 
   /**
    * Gets Vault token for tests.
@@ -242,7 +235,7 @@ trait IntegrationTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterA
   /**
    * Creates a test table in PostgreSQL.
    */
-  protected def createTestTable(tableName: String, schema: String): Unit = {
+  protected def createTestTable(tableName: String, schema: String): Unit =
     if (postgresContainer != null && postgresContainer.isRunning) {
       import java.sql.DriverManager
 
@@ -257,16 +250,13 @@ trait IntegrationTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterA
         statement.execute(s"DROP TABLE IF EXISTS $tableName")
         statement.execute(schema)
         logger.info(s"Created test table: $tableName")
-      } finally {
-        connection.close()
-      }
+      } finally connection.close()
     }
-  }
 
   /**
    * Inserts test data into PostgreSQL.
    */
-  protected def insertTestData(tableName: String, data: Seq[Map[String, Any]]): Unit = {
+  protected def insertTestData(tableName: String, data: Seq[Map[String, Any]]): Unit =
     if (postgresContainer != null && postgresContainer.isRunning && data.nonEmpty) {
       import java.sql.DriverManager
 
@@ -277,9 +267,9 @@ trait IntegrationTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterA
       )
 
       try {
-        val columns = data.head.keys.toSeq
+        val columns      = data.head.keys.toSeq
         val placeholders = columns.map(_ => "?").mkString(", ")
-        val sql = s"INSERT INTO $tableName (${columns.mkString(", ")}) VALUES ($placeholders)"
+        val sql          = s"INSERT INTO $tableName (${columns.mkString(", ")}) VALUES ($placeholders)"
 
         val statement = connection.prepareStatement(sql)
 
@@ -292,46 +282,40 @@ trait IntegrationTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterA
 
         statement.executeBatch()
         logger.info(s"Inserted ${data.size} rows into $tableName")
-      } finally {
-        connection.close()
-      }
+      } finally connection.close()
     }
-  }
 
   /**
    * Stores a secret in Vault for testing.
    */
-  protected def storeVaultSecret(path: String, data: Map[String, Any]): Unit = {
+  protected def storeVaultSecret(path: String, data: Map[String, Any]): Unit =
     if (vaultContainer != null && vaultContainer.isRunning) {
       import com.pipeline.credentials.VaultClient
 
       val vaultClient = VaultClient(getVaultAddress, getVaultToken)
       vaultClient.writeSecret(path, data) match {
-        case scala.util.Success(_) =>
+        case scala.util.Success(_)  =>
           logger.info(s"Stored Vault secret: $path")
         case scala.util.Failure(ex) =>
           logger.error(s"Failed to store Vault secret: $path", ex)
           throw ex
       }
     }
-  }
 
   /**
    * Checks if Docker is available for testing.
    */
-  protected def isDockerAvailable: Boolean = {
+  protected def isDockerAvailable: Boolean =
     try {
       val process = Runtime.getRuntime.exec("docker info")
       process.waitFor() == 0
     } catch {
       case _: Exception => false
     }
-  }
 
   /**
    * Skips test if Docker is not available.
    */
-  protected def requireDocker(): Unit = {
+  protected def requireDocker(): Unit =
     assume(isDockerAvailable, "Docker is required for this test")
-  }
 }

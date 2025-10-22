@@ -34,12 +34,12 @@ class ValidationIntegrationTest extends IntegrationTestBase {
       "validation_test",
       Seq(
         Map("id" -> 1, "name" -> "Alice", "age" -> 30, "email" -> "alice@example.com"),
-        Map("id" -> 2, "name" -> "Bob", "age" -> 25, "email" -> "bob@example.com"),
+        Map("id" -> 2, "name" -> "Bob", "age"   -> 25, "email" -> "bob@example.com"),
       ),
     )
 
     // Create pipeline with schema validation
-    val props = getPostgresProperties
+    val props    = getPostgresProperties
     val pipeline = Pipeline(
       name = "validation-test-pipeline",
       mode = "batch",
@@ -47,24 +47,23 @@ class ValidationIntegrationTest extends IntegrationTestBase {
         ExtractStep(
           method = "fromPostgres",
           config = Map(
-            "host" -> props("host"),
-            "port" -> props("port"),
+            "host"     -> props("host"),
+            "port"     -> props("port"),
             "database" -> props("database"),
             "username" -> props("username"),
             "password" -> props("password"),
-            "table" -> "validation_test",
+            "table"    -> "validation_test",
           ),
           nextStep = None,
         ),
         ValidateStep(
           method = "validateSchema",
           config = Map(
-            "requiredColumns" -> List("id", "name", "age", "email"),
-            "columnTypes" -> Map(
-              "id" -> "IntegerType",
-              "name" -> "StringType",
-              "age" -> "IntegerType",
-              "email" -> "StringType",
+            "expectedColumns" -> List(
+              Map("name" -> "id", "type"    -> "IntegerType"),
+              Map("name" -> "name", "type"  -> "StringType"),
+              Map("name" -> "age", "type"   -> "IntegerType"),
+              Map("name" -> "email", "type" -> "StringType"),
             ),
           ),
           nextStep = None,
@@ -102,14 +101,14 @@ class ValidationIntegrationTest extends IntegrationTestBase {
     insertTestData(
       "null_test",
       Seq(
-        Map("id" -> 1, "name" -> "Alice", "required_field" -> "value1"),
-        Map("id" -> 2, "name" -> "Bob", "required_field" -> "value2"),
+        Map("id" -> 1, "name" -> "Alice", "required_field"   -> "value1"),
+        Map("id" -> 2, "name" -> "Bob", "required_field"     -> "value2"),
         Map("id" -> 3, "name" -> "Charlie", "required_field" -> null),
       ),
     )
 
     // Create pipeline with null validation
-    val props = getPostgresProperties
+    val props    = getPostgresProperties
     val pipeline = Pipeline(
       name = "null-validation-pipeline",
       mode = "batch",
@@ -117,20 +116,19 @@ class ValidationIntegrationTest extends IntegrationTestBase {
         ExtractStep(
           method = "fromPostgres",
           config = Map(
-            "host" -> props("host"),
-            "port" -> props("port"),
+            "host"     -> props("host"),
+            "port"     -> props("port"),
             "database" -> props("database"),
             "username" -> props("username"),
             "password" -> props("password"),
-            "table" -> "null_test",
+            "table"    -> "null_test",
           ),
           nextStep = None,
         ),
         ValidateStep(
           method = "validateNulls",
           config = Map(
-            "columns" -> List("required_field"),
-            "failOnNull" -> true,
+            "notNullColumns" -> List("required_field"),
           ),
           nextStep = None,
         ),
@@ -168,14 +166,14 @@ class ValidationIntegrationTest extends IntegrationTestBase {
     insertTestData(
       "range_test",
       Seq(
-        Map("id" -> 1, "age" -> 25, "score" -> 85.5),
-        Map("id" -> 2, "age" -> 30, "score" -> 92.3),
+        Map("id" -> 1, "age" -> 25, "score"  -> 85.5),
+        Map("id" -> 2, "age" -> 30, "score"  -> 92.3),
         Map("id" -> 3, "age" -> 150, "score" -> 78.1), // Invalid age
       ),
     )
 
     // Create pipeline with range validation
-    val props = getPostgresProperties
+    val props    = getPostgresProperties
     val pipeline = Pipeline(
       name = "range-validation-pipeline",
       mode = "batch",
@@ -183,20 +181,20 @@ class ValidationIntegrationTest extends IntegrationTestBase {
         ExtractStep(
           method = "fromPostgres",
           config = Map(
-            "host" -> props("host"),
-            "port" -> props("port"),
+            "host"     -> props("host"),
+            "port"     -> props("port"),
             "database" -> props("database"),
             "username" -> props("username"),
             "password" -> props("password"),
-            "table" -> "range_test",
+            "table"    -> "range_test",
           ),
           nextStep = None,
         ),
         ValidateStep(
           method = "validateRanges",
           config = Map(
-            "ranges" -> Map(
-              "age" -> Map("min" -> 0, "max" -> 120),
+            "ranges"          -> Map(
+              "age"   -> Map("min" -> 0, "max" -> 120),
               "score" -> Map("min" -> 0.0, "max" -> 100.0),
             ),
             "failOnViolation" -> true,
@@ -230,7 +228,7 @@ class ValidationIntegrationTest extends IntegrationTestBase {
     // Don't insert any data
 
     // Create pipeline
-    val props = getPostgresProperties
+    val props    = getPostgresProperties
     val pipeline = Pipeline(
       name = "empty-test-pipeline",
       mode = "batch",
@@ -238,12 +236,12 @@ class ValidationIntegrationTest extends IntegrationTestBase {
         ExtractStep(
           method = "fromPostgres",
           config = Map(
-            "host" -> props("host"),
-            "port" -> props("port"),
+            "host"     -> props("host"),
+            "port"     -> props("port"),
             "database" -> props("database"),
             "username" -> props("username"),
             "password" -> props("password"),
-            "table" -> "empty_table",
+            "table"    -> "empty_table",
           ),
           nextStep = None,
         ),
@@ -283,14 +281,14 @@ class ValidationIntegrationTest extends IntegrationTestBase {
     insertTestData(
       "business_rules_test",
       Seq(
-        Map("order_id" -> 1, "customer_type" -> "VIP", "amount" -> 100.00, "discount" -> 10.0),
+        Map("order_id" -> 1, "customer_type" -> "VIP", "amount"     -> 100.00, "discount" -> 10.0),
         Map("order_id" -> 2, "customer_type" -> "Regular", "amount" -> 200.00, "discount" -> 5.0),
-        Map("order_id" -> 3, "customer_type" -> "VIP", "amount" -> 50.00, "discount" -> 50.0), // Discount too high
+        Map("order_id" -> 3, "customer_type" -> "VIP", "amount"     -> 50.00, "discount"  -> 50.0), // Discount too high
       ),
     )
 
     // Create pipeline with business rules
-    val props = getPostgresProperties
+    val props    = getPostgresProperties
     val pipeline = Pipeline(
       name = "business-rules-pipeline",
       mode = "batch",
@@ -298,12 +296,12 @@ class ValidationIntegrationTest extends IntegrationTestBase {
         ExtractStep(
           method = "fromPostgres",
           config = Map(
-            "host" -> props("host"),
-            "port" -> props("port"),
+            "host"     -> props("host"),
+            "port"     -> props("port"),
             "database" -> props("database"),
             "username" -> props("username"),
             "password" -> props("password"),
-            "table" -> "business_rules_test",
+            "table"    -> "business_rules_test",
           ),
           nextStep = None,
         ),
@@ -311,18 +309,9 @@ class ValidationIntegrationTest extends IntegrationTestBase {
           method = "validateBusinessRules",
           config = Map(
             "rules" -> List(
-              Map(
-                "name" -> "discount_limit",
-                "condition" -> "discount <= 20",
-                "message" -> "Discount cannot exceed 20%",
-              ),
-              Map(
-                "name" -> "minimum_order",
-                "condition" -> "amount >= 10",
-                "message" -> "Order amount must be at least $10",
-              ),
+              "discount <= 20", // Discount cannot exceed 20%
+              "amount >= 10",   // Order amount must be at least $10
             ),
-            "failOnViolation" -> true,
           ),
           nextStep = None,
         ),
