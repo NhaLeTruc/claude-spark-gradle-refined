@@ -48,9 +48,9 @@ class IAMConfigTest extends AnyFunSuite with Matchers {
 
   test("IAMConfig should parse from Vault secret data without sessionToken") {
     val secretData = Map(
-      "accessKeyId" -> "AKIAIOSFODNN7EXAMPLE",
+      "accessKeyId"     -> "AKIAIOSFODNN7EXAMPLE",
       "secretAccessKey" -> "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-      "region" -> "us-east-1",
+      "region"          -> "us-east-1",
     )
 
     val config = IAMConfig.fromVaultData(secretData)
@@ -63,10 +63,10 @@ class IAMConfigTest extends AnyFunSuite with Matchers {
 
   test("IAMConfig should parse from Vault secret data with sessionToken") {
     val secretData = Map(
-      "accessKeyId" -> "ASIAIOSFODNN7EXAMPLE",
+      "accessKeyId"     -> "ASIAIOSFODNN7EXAMPLE",
       "secretAccessKey" -> "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-      "sessionToken" -> "FwoGZXIvYXdzEBYaD...",
-      "region" -> "ap-south-1",
+      "sessionToken"    -> "FwoGZXIvYXdzEBYaD...",
+      "region"          -> "ap-south-1",
     )
 
     val config = IAMConfig.fromVaultData(secretData)
@@ -110,7 +110,7 @@ class IAMConfigTest extends AnyFunSuite with Matchers {
 
   test("IAMConfig should default region to us-east-1 if not provided") {
     val secretData = Map(
-      "accessKeyId" -> "AKIAIOSFODNN7EXAMPLE",
+      "accessKeyId"     -> "AKIAIOSFODNN7EXAMPLE",
       "secretAccessKey" -> "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
     )
 

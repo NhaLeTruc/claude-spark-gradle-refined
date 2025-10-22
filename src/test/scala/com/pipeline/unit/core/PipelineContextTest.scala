@@ -20,7 +20,7 @@ class PipelineContextTest extends AnyFunSuite with Matchers with BeforeAndAfterA
 
   @transient private var spark: SparkSession = _
 
-  override def beforeAll(): Unit = {
+  override def beforeAll(): Unit =
     spark = SparkSession
       .builder()
       .appName("PipelineContextTest")
@@ -28,18 +28,16 @@ class PipelineContextTest extends AnyFunSuite with Matchers with BeforeAndAfterA
       .config("spark.ui.enabled", "false")
       .config("spark.sql.shuffle.partitions", "2")
       .getOrCreate()
-  }
 
-  override def afterAll(): Unit = {
+  override def afterAll(): Unit =
     if (spark != null) {
       spark.stop()
     }
-  }
 
   test("PipelineContext should initialize with primary DataFrame") {
     val sparkImplicits = spark.implicits
     import sparkImplicits._
-    val df = Seq((1, "Alice"), (2, "Bob")).toDF("id", "name")
+    val df             = Seq((1, "Alice"), (2, "Bob")).toDF("id", "name")
 
     val context = PipelineContext(Right(df))
 
@@ -51,10 +49,10 @@ class PipelineContextTest extends AnyFunSuite with Matchers with BeforeAndAfterA
   test("PipelineContext should register named DataFrame") {
     val sparkImplicits = spark.implicits
     import sparkImplicits._
-    val primaryDf = Seq((1, "Alice")).toDF("id", "name")
-    val usersDf = Seq((1, "Alice", 30)).toDF("id", "name", "age")
+    val primaryDf      = Seq((1, "Alice")).toDF("id", "name")
+    val usersDf        = Seq((1, "Alice", 30)).toDF("id", "name", "age")
 
-    val context = PipelineContext(Right(primaryDf))
+    val context        = PipelineContext(Right(primaryDf))
     val updatedContext = context.register("users", usersDf)
 
     updatedContext.dataFrames.size shouldBe 1
@@ -65,8 +63,8 @@ class PipelineContextTest extends AnyFunSuite with Matchers with BeforeAndAfterA
   test("PipelineContext should retrieve registered DataFrame by name") {
     val sparkImplicits = spark.implicits
     import sparkImplicits._
-    val primaryDf = Seq((1, "Alice")).toDF("id", "name")
-    val ordersDf = Seq((101, 1, 99.99)).toDF("order_id", "user_id", "amount")
+    val primaryDf      = Seq((1, "Alice")).toDF("id", "name")
+    val ordersDf       = Seq((101, 1, 99.99)).toDF("order_id", "user_id", "amount")
 
     val context = PipelineContext(Right(primaryDf))
       .register("orders", ordersDf)
@@ -80,7 +78,7 @@ class PipelineContextTest extends AnyFunSuite with Matchers with BeforeAndAfterA
   test("PipelineContext should return None for non-existent DataFrame") {
     val sparkImplicits = spark.implicits
     import sparkImplicits._
-    val df = Seq((1, "Alice")).toDF("id", "name")
+    val df             = Seq((1, "Alice")).toDF("id", "name")
 
     val context = PipelineContext(Right(df))
 
@@ -90,10 +88,10 @@ class PipelineContextTest extends AnyFunSuite with Matchers with BeforeAndAfterA
   test("PipelineContext should update primary DataFrame") {
     val sparkImplicits = spark.implicits
     import sparkImplicits._
-    val initialDf = Seq((1, "Alice")).toDF("id", "name")
-    val newDf = Seq((2, "Bob"), (3, "Charlie")).toDF("id", "name")
+    val initialDf      = Seq((1, "Alice")).toDF("id", "name")
+    val newDf          = Seq((2, "Bob"), (3, "Charlie")).toDF("id", "name")
 
-    val context = PipelineContext(Right(initialDf))
+    val context        = PipelineContext(Right(initialDf))
     val updatedContext = context.updatePrimary(Right(newDf))
 
     updatedContext.primary.right.get.count() shouldBe 2
@@ -102,9 +100,9 @@ class PipelineContextTest extends AnyFunSuite with Matchers with BeforeAndAfterA
   test("PipelineContext should preserve registered DataFrames when updating primary") {
     val sparkImplicits = spark.implicits
     import sparkImplicits._
-    val primaryDf = Seq((1, "Alice")).toDF("id", "name")
-    val usersDf = Seq((1, "Alice", 30)).toDF("id", "name", "age")
-    val newPrimaryDf = Seq((2, "Bob")).toDF("id", "name")
+    val primaryDf      = Seq((1, "Alice")).toDF("id", "name")
+    val usersDf        = Seq((1, "Alice", 30)).toDF("id", "name", "age")
+    val newPrimaryDf   = Seq((2, "Bob")).toDF("id", "name")
 
     val context = PipelineContext(Right(primaryDf))
       .register("users", usersDf)
@@ -118,10 +116,10 @@ class PipelineContextTest extends AnyFunSuite with Matchers with BeforeAndAfterA
   test("PipelineContext should support multiple registered DataFrames") {
     val sparkImplicits = spark.implicits
     import sparkImplicits._
-    val primaryDf = Seq((1, "Alice")).toDF("id", "name")
-    val usersDf = Seq((1, "Alice", 30)).toDF("id", "name", "age")
-    val ordersDf = Seq((101, 1, 99.99)).toDF("order_id", "user_id", "amount")
-    val productsDf = Seq(("P1", "Widget", 19.99)).toDF("product_id", "name", "price")
+    val primaryDf      = Seq((1, "Alice")).toDF("id", "name")
+    val usersDf        = Seq((1, "Alice", 30)).toDF("id", "name", "age")
+    val ordersDf       = Seq((101, 1, 99.99)).toDF("order_id", "user_id", "amount")
+    val productsDf     = Seq(("P1", "Widget", 19.99)).toDF("product_id", "name", "price")
 
     val context = PipelineContext(Right(primaryDf))
       .register("users", usersDf)
@@ -137,9 +135,9 @@ class PipelineContextTest extends AnyFunSuite with Matchers with BeforeAndAfterA
   test("PipelineContext should overwrite DataFrame if registered with same name") {
     val sparkImplicits = spark.implicits
     import sparkImplicits._
-    val primaryDf = Seq((1, "Alice")).toDF("id", "name")
-    val usersDf1 = Seq((1, "Alice")).toDF("id", "name")
-    val usersDf2 = Seq((2, "Bob"), (3, "Charlie")).toDF("id", "name")
+    val primaryDf      = Seq((1, "Alice")).toDF("id", "name")
+    val usersDf1       = Seq((1, "Alice")).toDF("id", "name")
+    val usersDf2       = Seq((2, "Bob"), (3, "Charlie")).toDF("id", "name")
 
     val context = PipelineContext(Right(primaryDf))
       .register("users", usersDf1)

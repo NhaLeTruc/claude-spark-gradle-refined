@@ -17,8 +17,8 @@ class CredentialConfigFactoryTest extends AnyFunSuite with Matchers {
 
   test("Factory should create JdbcConfig for postgres type") {
     val secretData = Map(
-      "host" -> "localhost",
-      "port" -> "5432",
+      "host"     -> "localhost",
+      "port"     -> "5432",
       "database" -> "testdb",
       "username" -> "user",
       "password" -> "pass",
@@ -32,8 +32,8 @@ class CredentialConfigFactoryTest extends AnyFunSuite with Matchers {
 
   test("Factory should create JdbcConfig for mysql type") {
     val secretData = Map(
-      "host" -> "localhost",
-      "port" -> "3306",
+      "host"     -> "localhost",
+      "port"     -> "3306",
       "database" -> "testdb",
       "username" -> "user",
       "password" -> "pass",
@@ -47,9 +47,9 @@ class CredentialConfigFactoryTest extends AnyFunSuite with Matchers {
 
   test("Factory should create IAMConfig for s3 type") {
     val secretData = Map(
-      "accessKeyId" -> "AKIAIOSFODNN7EXAMPLE",
+      "accessKeyId"     -> "AKIAIOSFODNN7EXAMPLE",
       "secretAccessKey" -> "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-      "region" -> "us-west-2",
+      "region"          -> "us-west-2",
     )
 
     val config = CredentialConfigFactory.create("s3", secretData)
@@ -70,7 +70,7 @@ class CredentialConfigFactoryTest extends AnyFunSuite with Matchers {
 
   test("Factory should create OtherConfig for deltalake type") {
     val secretData = Map(
-      "path" -> "s3a://bucket/delta",
+      "path"        -> "s3a://bucket/delta",
       "mergeSchema" -> "true",
     )
 
@@ -89,8 +89,8 @@ class CredentialConfigFactoryTest extends AnyFunSuite with Matchers {
 
   test("Factory should be case-insensitive for types") {
     val secretData = Map(
-      "host" -> "localhost",
-      "port" -> "5432",
+      "host"     -> "localhost",
+      "port"     -> "5432",
       "database" -> "testdb",
       "username" -> "user",
       "password" -> "pass",

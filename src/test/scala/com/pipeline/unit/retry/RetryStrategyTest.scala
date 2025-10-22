@@ -18,7 +18,7 @@ import scala.util.{Failure, Success, Try}
 class RetryStrategyTest extends AnyFunSuite with Matchers {
 
   test("RetryStrategy should succeed on first attempt if operation succeeds") {
-    var attempts = 0
+    var attempts  = 0
     val operation = () => {
       attempts += 1
       Success("success")
@@ -32,7 +32,7 @@ class RetryStrategyTest extends AnyFunSuite with Matchers {
   }
 
   test("RetryStrategy should retry up to maxAttempts times on failure") {
-    var attempts = 0
+    var attempts  = 0
     val operation = () => {
       attempts += 1
       Failure(new RuntimeException(s"Attempt $attempts failed"))
@@ -45,7 +45,7 @@ class RetryStrategyTest extends AnyFunSuite with Matchers {
   }
 
   test("RetryStrategy should succeed on second attempt after initial failure") {
-    var attempts = 0
+    var attempts  = 0
     val operation = () => {
       attempts += 1
       if (attempts == 1) {
@@ -63,7 +63,7 @@ class RetryStrategyTest extends AnyFunSuite with Matchers {
   }
 
   test("RetryStrategy should wait delayMillis between retries") {
-    var attempts = 0
+    var attempts  = 0
     val startTime = System.currentTimeMillis()
     val operation = () => {
       attempts += 1
@@ -74,7 +74,7 @@ class RetryStrategyTest extends AnyFunSuite with Matchers {
       }
     }
 
-    val result = RetryStrategy.executeWithRetry(operation, maxAttempts = 3, delayMillis = 500)
+    val result      = RetryStrategy.executeWithRetry(operation, maxAttempts = 3, delayMillis = 500)
     val elapsedTime = System.currentTimeMillis() - startTime
 
     result shouldBe a[Success[_]]
@@ -85,7 +85,7 @@ class RetryStrategyTest extends AnyFunSuite with Matchers {
   }
 
   test("RetryStrategy should use tail recursion to avoid stack overflow") {
-    var attempts = 0
+    var attempts  = 0
     val operation = () => {
       attempts += 1
       if (attempts < 100) {
@@ -103,9 +103,7 @@ class RetryStrategyTest extends AnyFunSuite with Matchers {
   }
 
   test("RetryStrategy should preserve exception details on final failure") {
-    val operation = () => {
-      Failure(new IllegalArgumentException("Invalid argument"))
-    }
+    val operation = () => Failure(new IllegalArgumentException("Invalid argument"))
 
     val result = RetryStrategy.executeWithRetry(operation, maxAttempts = 2, delayMillis = 50)
 

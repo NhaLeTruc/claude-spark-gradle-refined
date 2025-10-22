@@ -70,8 +70,8 @@ class JdbcConfigTest extends AnyFunSuite with Matchers {
 
   test("JdbcConfig should parse from Vault secret data") {
     val secretData = Map(
-      "host" -> "db.example.com",
-      "port" -> "5432",
+      "host"     -> "db.example.com",
+      "port"     -> "5432",
       "database" -> "production",
       "username" -> "dbuser",
       "password" -> "securepass",
@@ -100,8 +100,8 @@ class JdbcConfigTest extends AnyFunSuite with Matchers {
 
   test("JdbcConfig should handle integer port from string") {
     val secretData = Map(
-      "host" -> "localhost",
-      "port" -> "5432", // String, not Int
+      "host"     -> "localhost",
+      "port"     -> "5432", // String, not Int
       "database" -> "testdb",
       "username" -> "user",
       "password" -> "pass",

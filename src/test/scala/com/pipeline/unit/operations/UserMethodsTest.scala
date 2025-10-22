@@ -19,7 +19,7 @@ class UserMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
 
   @transient private var spark: SparkSession = _
 
-  override def beforeAll(): Unit = {
+  override def beforeAll(): Unit =
     spark = SparkSession
       .builder()
       .appName("UserMethodsTest")
@@ -27,13 +27,11 @@ class UserMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
       .config("spark.ui.enabled", "false")
       .config("spark.sql.shuffle.partitions", "2")
       .getOrCreate()
-  }
 
-  override def afterAll(): Unit = {
+  override def afterAll(): Unit =
     if (spark != null) {
       spark.stop()
     }
-  }
 
   test("UserMethods should have filterRows method") {
     val config = Map("condition" -> "age > 18")
@@ -60,7 +58,7 @@ class UserMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
     val config = Map(
       "columns" -> Map(
         "full_name" -> "concat(first_name, ' ', last_name)",
-        "is_adult" -> "age >= 18",
+        "is_adult"  -> "age >= 18",
       ),
     )
 
@@ -70,8 +68,8 @@ class UserMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
   test("UserMethods should have joinDataFrames method") {
     val config = Map(
       "inputDataFrames" -> List("users", "orders"),
-      "joinType" -> "inner",
-      "joinColumn" -> "user_id",
+      "joinType"        -> "inner",
+      "joinColumn"      -> "user_id",
     )
 
     config should contain key "inputDataFrames"
@@ -89,11 +87,11 @@ class UserMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
 
   test("UserMethods should have aggregateData method") {
     val config = Map(
-      "groupBy" -> List("category", "region"),
+      "groupBy"      -> List("category", "region"),
       "aggregations" -> Map(
         "total_sales" -> "sum(amount)",
-        "avg_price" -> "avg(price)",
-        "count" -> "count(*)",
+        "avg_price"   -> "avg(price)",
+        "count"       -> "count(*)",
       ),
     )
 
@@ -103,7 +101,7 @@ class UserMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
 
   test("UserMethods should have reshapeData method") {
     val config = Map(
-      "operation" -> "pivot",
+      "operation"   -> "pivot",
       "pivotColumn" -> "category",
       "valueColumn" -> "amount",
     )
@@ -114,7 +112,7 @@ class UserMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
   test("UserMethods should have unionDataFrames method") {
     val config = Map(
       "inputDataFrames" -> List("df1", "df2", "df3"),
-      "distinct" -> "true",
+      "distinct"        -> "true",
     )
 
     val inputDfs = config("inputDataFrames").asInstanceOf[List[String]]
@@ -205,8 +203,8 @@ class UserMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
     val config = Map(
       "columns" -> Map(
         "full_name" -> "concat(first_name, ' ', last_name)",
-        "is_adult" -> "age >= 18"
-      )
+        "is_adult"  -> "age >= 18",
+      ),
     )
 
     val result = UserMethods.enrichData(df, config, spark)
@@ -224,15 +222,15 @@ class UserMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
       ("Electronics", "North", 100.0),
       ("Electronics", "South", 200.0),
       ("Books", "North", 50.0),
-      ("Books", "South", 75.0)
+      ("Books", "South", 75.0),
     ).toDF("category", "region", "amount")
 
     val config = Map(
-      "groupBy" -> List("category"),
+      "groupBy"      -> List("category"),
       "aggregations" -> Map(
-        "amount" -> "sum",
-        "category" -> "count"
-      )
+        "amount"   -> "sum",
+        "category" -> "count",
+      ),
     )
 
     val result = UserMethods.aggregateData(df, config, spark)
@@ -252,8 +250,8 @@ class UserMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
     val df3 = Seq((5, "Eve")).toDF("id", "name")
 
     val config = Map(
-      "inputDataFrames" -> List("df1", "df2", "df3"),
-      "resolvedDataFrames" -> Map("df1" -> df1, "df2" -> df2, "df3" -> df3)
+      "inputDataFrames"    -> List("df1", "df2", "df3"),
+      "resolvedDataFrames" -> Map("df1" -> df1, "df2" -> df2, "df3" -> df3),
     )
 
     val result = UserMethods.unionDataFrames(df0, config, spark)
@@ -270,15 +268,15 @@ class UserMethodsTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
       ("Product1", "Q1", 100.0),
       ("Product1", "Q2", 150.0),
       ("Product2", "Q1", 200.0),
-      ("Product2", "Q2", 250.0)
+      ("Product2", "Q2", 250.0),
     ).toDF("product", "quarter", "sales")
 
     val config = Map(
-      "operation" -> "pivot",
-      "pivotColumn" -> "quarter",
+      "operation"      -> "pivot",
+      "pivotColumn"    -> "quarter",
       "groupByColumns" -> List("product"),
-      "valueColumn" -> "sales",
-      "aggFunction" -> "sum"
+      "valueColumn"    -> "sales",
+      "aggFunction"    -> "sum",
     )
 
     val result = UserMethods.reshapeData(df, config, spark)

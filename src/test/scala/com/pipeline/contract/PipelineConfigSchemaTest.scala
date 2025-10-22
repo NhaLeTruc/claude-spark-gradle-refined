@@ -164,7 +164,7 @@ class PipelineConfigSchemaTest extends AnyFunSuite with Matchers {
 
   test("Config object must be valid JSON object type") {
     // Config must be an object, not a string or array
-    val validConfig = """{"config": {"key": "value"}}"""
+    val validConfig    = """{"config": {"key": "value"}}"""
     val invalidConfig1 = """{"config": "string"}"""
     val invalidConfig2 = """{"config": []}"""
 

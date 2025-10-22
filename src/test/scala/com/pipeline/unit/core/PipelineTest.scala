@@ -20,7 +20,7 @@ class PipelineTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
 
   @transient private var spark: SparkSession = _
 
-  override def beforeAll(): Unit = {
+  override def beforeAll(): Unit =
     spark = SparkSession
       .builder()
       .appName("PipelineTest")
@@ -28,13 +28,11 @@ class PipelineTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
       .config("spark.ui.enabled", "false")
       .config("spark.sql.shuffle.partitions", "2")
       .getOrCreate()
-  }
 
-  override def afterAll(): Unit = {
+  override def afterAll(): Unit =
     if (spark != null) {
       spark.stop()
     }
-  }
 
   test("Pipeline should have name and mode") {
     val pipeline = Pipeline(
@@ -76,7 +74,7 @@ class PipelineTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
 
   test("Pipeline should validate mode is batch or streaming") {
     // Valid modes
-    val batchPipeline = Pipeline(name = "test", mode = "batch", steps = List.empty)
+    val batchPipeline     = Pipeline(name = "test", mode = "batch", steps = List.empty)
     val streamingPipeline = Pipeline(name = "test", mode = "streaming", steps = List.empty)
 
     batchPipeline.mode should (equal("batch") or equal("streaming"))
@@ -91,9 +89,9 @@ class PipelineTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
   }
 
   test("Pipeline should chain steps together") {
-    val load = LoadStep(method = "toS3", config = Map.empty, nextStep = None)
+    val load      = LoadStep(method = "toS3", config = Map.empty, nextStep = None)
     val transform = TransformStep(method = "filterRows", config = Map.empty, nextStep = Some(load))
-    val extract = ExtractStep(method = "fromPostgres", config = Map.empty, nextStep = Some(transform))
+    val extract   = ExtractStep(method = "fromPostgres", config = Map.empty, nextStep = Some(transform))
 
     val pipeline = Pipeline(name = "chained", mode = "batch", steps = List(extract))
 
@@ -125,7 +123,7 @@ class PipelineTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
 
   test("Pipeline should be immutable") {
     val originalSteps = List(ExtractStep(method = "test", config = Map.empty, nextStep = None))
-    val pipeline = Pipeline(name = "test", mode = "batch", steps = originalSteps)
+    val pipeline      = Pipeline(name = "test", mode = "batch", steps = originalSteps)
 
     pipeline.steps shouldBe originalSteps
     // Pipeline is a case class, so it's immutable
@@ -141,7 +139,7 @@ class PipelineTest extends AnyFunSuite with Matchers with BeforeAndAfterAll {
   }
 
   test("Pipeline.isStreamingMode should return true for streaming pipelines") {
-    val batchPipeline = Pipeline(name = "batch", mode = "batch", steps = List.empty)
+    val batchPipeline     = Pipeline(name = "batch", mode = "batch", steps = List.empty)
     val streamingPipeline = Pipeline(name = "streaming", mode = "streaming", steps = List.empty)
 
     batchPipeline.isStreamingMode shouldBe false
