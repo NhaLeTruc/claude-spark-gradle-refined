@@ -264,7 +264,83 @@ trait PerformanceTestBase extends AnyFlatSpec with Matchers with BeforeAndAfterA
   protected def clearMetrics(): Unit = {
     performanceMetrics.clear()
   }
+
+  /**
+   * Measures resource utilization during operation execution.
+   *
+   * @param name Operation name
+   * @param operation Code block to measure
+   * @tparam T Return type
+   * @return Tuple of (result, ResourceMetrics)
+   */
+  protected def measureResources[T](name: String)(operation: => T): (T, ResourceMetrics) = {
+    val runtime = Runtime.getRuntime
+
+    // Trigger GC before measurement for more accurate baseline
+    System.gc()
+    Thread.sleep(100)
+
+    val memBefore = runtime.totalMemory() - runtime.freeMemory()
+    val startTime = System.currentTimeMillis()
+
+    val result = operation
+
+    val duration = System.currentTimeMillis() - startTime
+    val memAfter = runtime.totalMemory() - runtime.freeMemory()
+    val memUsed = math.max(0, memAfter - memBefore)
+
+    val metrics = ResourceMetrics(
+      durationMs = duration,
+      memoryUsedBytes = memUsed,
+      memoryUsedMB = memUsed / (1024.0 * 1024.0),
+    )
+
+    logger.info(s"[$name] Duration: ${duration}ms, Memory: ${metrics.memoryUsedMB}%.2f MB")
+
+    result -> metrics
+  }
+
+  /**
+   * Measures CPU time (thread CPU time) during operation execution.
+   *
+   * @param name Operation name
+   * @param operation Code block to measure
+   * @tparam T Return type
+   * @return Tuple of (result, wall clock time ms, CPU time ms)
+   */
+  protected def measureCPUTime[T](name: String)(operation: => T): (T, Long, Long) = {
+    val threadBean = java.lang.management.ManagementFactory.getThreadMXBean
+
+    if (!threadBean.isCurrentThreadCpuTimeSupported) {
+      logger.warn(s"[$name] CPU time measurement not supported on this platform")
+      val (result, wallTime) = measureTime(name)(operation)
+      return (result, wallTime, 0L)
+    }
+
+    val cpuBefore = threadBean.getCurrentThreadCpuTime
+    val startTime = System.currentTimeMillis()
+
+    val result = operation
+
+    val wallTime = System.currentTimeMillis() - startTime
+    val cpuTime = (threadBean.getCurrentThreadCpuTime - cpuBefore) / 1000000 // Convert to ms
+
+    val cpuUtilization = if (wallTime > 0) (cpuTime.toDouble / wallTime) * 100 else 0.0
+
+    logger.info(f"[$name] Wall time: ${wallTime}ms, CPU time: ${cpuTime}ms, CPU utilization: $cpuUtilization%.1f%%")
+
+    (result, wallTime, cpuTime)
+  }
 }
+
+/**
+ * Resource utilization metrics.
+ */
+case class ResourceMetrics(
+    durationMs: Long,
+    memoryUsedBytes: Long,
+    memoryUsedMB: Double,
+)
 
 /**
  * Performance metric tracker.
@@ -302,10 +378,19 @@ class PerformanceMetric(val name: String) {
 
   def getMeasurements: Seq[Long] = measurements.toSeq
 
+  /**
+   * Calculate percentile using nearest-rank method.
+   * Formula: index = ceil(p/100 * n) - 1
+   *
+   * @param p Percentile (0-100)
+   * @return Value at the pth percentile
+   */
   private def percentile(p: Int): Long = {
     if (measurements.isEmpty) return 0L
+    if (measurements.size == 1) return measurements.head
+
     val sorted = measurements.sorted
-    val index = (p / 100.0 * sorted.size).toInt
-    sorted(math.min(index, sorted.size - 1))
+    val index = math.ceil((p / 100.0) * sorted.size).toInt - 1
+    sorted(math.max(0, math.min(index, sorted.size - 1)))
   }
 }

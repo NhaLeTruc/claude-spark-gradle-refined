@@ -94,7 +94,7 @@ class ScalabilityPerformanceTest extends PerformanceTestBase {
       }
 
       val throughput = (dataSize * 1000.0) / duration
-      logger.info(s"Partitions: $partitions -> Duration: ${duration}ms, Throughput: ${throughput%.2f rec/sec")
+      logger.info(f"Partitions: $partitions -> Duration: ${duration}ms, Throughput: $throughput%.2f rec/sec")
 
       (partitions, duration, throughput)
     }
