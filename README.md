@@ -2,6 +2,24 @@
 
 A production-ready Apache Spark-based data pipeline orchestration framework that enables no-code pipeline creation through JSON configuration files.
 
+## ⚠️ Important: Running the Application
+
+To run this application locally, you **must** use the provided helper script or include the required JVM arguments:
+
+```bash
+# Recommended: Use the helper script
+./run-pipeline.sh config/examples/simple-etl.json
+
+# OR manually with JVM arguments (required for Java 17 + Spark)
+java --add-opens=java.base/java.lang=ALL-UNNAMED \
+     --add-opens=java.base/java.nio=ALL-UNNAMED \
+     --add-opens=java.base/sun.nio.ch=ALL-UNNAMED \
+     [... additional args ...] \
+     -jar build/libs/pipeline-app-1.0-SNAPSHOT.jar config.json
+```
+
+See the [Quick Start](#4-run-the-pipeline) section for complete instructions.
+
 ## 🚀 Features
 
 ### Core Capabilities
@@ -10,7 +28,7 @@ A production-ready Apache Spark-based data pipeline orchestration framework that
 - **Dual Execution Mode**: Run locally via CLI or deploy to Spark clusters via spark-submit
 - **Automatic Retry Logic**: Built-in fault tolerance with configurable attempts and delays (default: 3 attempts, 5s delay)
 - **Multi-DataFrame Operations**: Support for complex joins across multiple registered data sources
-- **Observability**: Structured JSON logging with MDC correlation IDs for request tracing
+- **Observability**: Structured logging with timestamps, thread names, and log levels for request tracing
 
 ### Data Sources (Extract) - 6 Methods
 - **PostgreSQL**: JDBC with partitioning, query/table support, connection pooling
@@ -166,7 +184,25 @@ See `config/examples/simple-etl.json`:
 
 **Local CLI Mode**:
 ```bash
-java -jar build/libs/pipeline-app-1.0-SNAPSHOT.jar config/examples/simple-etl.json
+# With required JVM arguments for Java 17 + Spark
+java --add-opens=java.base/java.lang=ALL-UNNAMED \
+     --add-opens=java.base/java.lang.invoke=ALL-UNNAMED \
+     --add-opens=java.base/java.lang.reflect=ALL-UNNAMED \
+     --add-opens=java.base/java.io=ALL-UNNAMED \
+     --add-opens=java.base/java.net=ALL-UNNAMED \
+     --add-opens=java.base/java.nio=ALL-UNNAMED \
+     --add-opens=java.base/java.util=ALL-UNNAMED \
+     --add-opens=java.base/java.util.concurrent=ALL-UNNAMED \
+     --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED \
+     --add-opens=java.base/sun.nio.ch=ALL-UNNAMED \
+     --add-opens=java.base/sun.nio.cs=ALL-UNNAMED \
+     --add-opens=java.base/sun.security.action=ALL-UNNAMED \
+     --add-opens=java.base/sun.util.calendar=ALL-UNNAMED \
+     --add-opens=java.security.jgss/sun.security.krb5=ALL-UNNAMED \
+     -jar build/libs/pipeline-app-1.0-SNAPSHOT.jar config/examples/simple-etl.json
+
+# Or use the helper script (recommended)
+./run-pipeline.sh config/examples/simple-etl.json
 ```
 
 **Spark Cluster Mode** (Standalone):
@@ -365,18 +401,19 @@ All pipelines automatically retry on failure:
 
 ## 📝 Logging
 
-Structured JSON logging with correlation IDs:
+Structured logging with timestamps and log levels:
 
-```json
-{
-  "timestamp": "2025-10-14T20:55:29.422Z",
-  "level": "INFO",
-  "message": "Starting pipeline execution",
-  "pipelineName": "simple-etl-pipeline",
-  "pipelineMode": "batch",
-  "correlationId": "550e8400-e29b-41d4-a716-446655440000"
-}
 ```
+2025-10-22T10:54:54.117Z [main] INFO  com.pipeline.cli.PipelineRunner$ - === Pipeline Orchestration Application Starting ===
+2025-10-22T10:54:54.289Z [main] INFO  com.pipeline.cli.PipelineRunner$ - Arguments: config/examples/simple-etl.json
+2025-10-22T10:54:54.289Z [main] INFO  com.pipeline.cli.PipelineRunner$ - Loading pipeline configuration from: config/examples/simple-etl.json
+2025-10-22T10:54:54.745Z [main] INFO  c.p.config.PipelineConfigParser$ - Successfully parsed pipeline configuration: simple-etl-pipeline
+2025-10-22T10:54:54.746Z [main] INFO  com.pipeline.cli.PipelineRunner$ - Loaded pipeline: simple-etl-pipeline (mode: batch)
+```
+
+Logs are written to:
+- **Console**: Real-time output during execution
+- **File**: `logs/pipeline.log` (rolling daily, 30-day retention, max 1GB)
 
 ## 🏗️ Development
 
@@ -398,6 +435,99 @@ Structured JSON logging with correlation IDs:
 ## 📄 License
 
 Copyright © 2025. All rights reserved.
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+#### Issue 1: NoClassDefFoundError (Dependencies Missing)
+
+**Error**:
+```
+Exception in thread "main" java.lang.NoClassDefFoundError: org/slf4j/LoggerFactory
+```
+
+**Cause**: The JAR was built without including runtime dependencies.
+
+**Solution**: The standard JAR (`pipeline-app-1.0-SNAPSHOT.jar`) is now configured as a fat JAR that includes all dependencies. Simply rebuild:
+```bash
+./gradlew clean build
+```
+
+#### Issue 2: IllegalAccessError (Java 17 Module System)
+
+**Error**:
+```
+IllegalAccessError: class org.apache.spark.storage.StorageUtils$ cannot access class sun.nio.ch.DirectBuffer
+because module java.base does not export sun.nio.ch to unnamed module
+```
+
+**Cause**: Spark requires access to internal Java modules when running on Java 17.
+
+**Solution**: Always use the provided `run-pipeline.sh` script which includes the required JVM arguments, or manually include them:
+```bash
+java --add-opens=java.base/java.lang=ALL-UNNAMED \
+     --add-opens=java.base/java.lang.invoke=ALL-UNNAMED \
+     --add-opens=java.base/java.lang.reflect=ALL-UNNAMED \
+     --add-opens=java.base/java.io=ALL-UNNAMED \
+     --add-opens=java.base/java.net=ALL-UNNAMED \
+     --add-opens=java.base/java.nio=ALL-UNNAMED \
+     --add-opens=java.base/java.util=ALL-UNNAMED \
+     --add-opens=java.base/java.util.concurrent=ALL-UNNAMED \
+     --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED \
+     --add-opens=java.base/sun.nio.ch=ALL-UNNAMED \
+     --add-opens=java.base/sun.nio.cs=ALL-UNNAMED \
+     --add-opens=java.base/sun.security.action=ALL-UNNAMED \
+     --add-opens=java.base/sun.util.calendar=ALL-UNNAMED \
+     --add-opens=java.security.jgss/sun.security.krb5=ALL-UNNAMED \
+     -jar build/libs/pipeline-app-1.0-SNAPSHOT.jar config.json
+```
+
+#### Issue 3: Silent Logging Failure
+
+**Symptoms**: No log output appears, application seems to hang or fail silently.
+
+**Cause**: The logback configuration was using `JsonLayout` which requires the `logback-json-classic` dependency.
+
+**Solution**: The logback configuration has been updated to use standard pattern layout. If you encounter this issue:
+1. Check that `src/main/resources/logback.xml` uses `PatternLayout` instead of `JsonLayout`
+2. Rebuild the JAR: `./gradlew clean build`
+
+#### Issue 4: VAULT_ADDR Not Set
+
+**Error**:
+```
+❌ Pipeline failed: VAULT_ADDR environment variable is not set
+```
+
+**Cause**: The pipeline configuration requires HashiCorp Vault for credential management.
+
+**Solution**: Set up Vault environment variables:
+```bash
+export VAULT_ADDR="http://localhost:8200"
+export VAULT_TOKEN="your-vault-token"
+```
+
+Or use a test pipeline configuration that doesn't require Vault.
+
+### Verifying the Build
+
+To verify your JAR is built correctly:
+
+```bash
+# 1. Check JAR size (should be ~500MB with all dependencies)
+ls -lh build/libs/pipeline-app-1.0-SNAPSHOT.jar
+
+# 2. Verify JAR contains dependencies
+jar tf build/libs/pipeline-app-1.0-SNAPSHOT.jar | grep -E "(slf4j|logback|spark)" | head -5
+
+# 3. Test with the helper script
+./run-pipeline.sh config/examples/simple-etl.json
+
+# Expected output should include:
+# "=== Pipeline Orchestration Application Starting ==="
+# "Successfully parsed pipeline configuration"
+```
 
 ## 📚 Documentation
 
@@ -472,6 +602,9 @@ For issues and questions, refer to:
 - 🚧 Phase 10: Polish & Performance Optimization (In Progress)
 
 **Recent Updates** (2025-10-22):
+- ✅ **JAR Packaging Fixes**: Fixed fat JAR configuration to include all runtime dependencies
+- ✅ **Java 17 Compatibility**: Added `run-pipeline.sh` helper script with required JVM module arguments
+- ✅ **Logging Fix**: Replaced JSON layout with standard pattern layout to fix silent logging failures
 - ✅ Enhanced performance tests with spec-aligned validation (Task T127)
 - ✅ Fixed percentile calculation bug in latency measurements
 - ✅ Added resource monitoring capabilities (CPU, memory tracking)
